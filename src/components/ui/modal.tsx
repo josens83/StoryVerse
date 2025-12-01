@@ -1,3 +1,13 @@
+/**
+ * Modal & BottomSheet Components
+ *
+ * Animated overlay components for displaying content in a dialog.
+ * - Modal: Centered dialog with backdrop blur
+ * - BottomSheet: Mobile-friendly bottom drawer
+ *
+ * @module components/ui/modal
+ */
+
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,16 +16,35 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+/**
+ * Props for the Modal component
+ */
 interface ModalProps {
+  /** Controls whether the modal is visible */
   isOpen: boolean;
+  /** Callback when the modal should close */
   onClose: () => void;
+  /** Content to display inside the modal */
   children: React.ReactNode;
+  /** Optional title displayed at the top */
   title?: string;
+  /** Optional description below the title */
   description?: string;
+  /** Additional CSS classes for the modal container */
   className?: string;
+  /** Whether to show the X close button (default: true) */
   showCloseButton?: boolean;
 }
 
+/**
+ * A centered modal dialog with backdrop blur effect
+ *
+ * @example
+ * <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Confirm">
+ *   <p>Are you sure?</p>
+ *   <Button onClick={handleConfirm}>Confirm</Button>
+ * </Modal>
+ */
 export function Modal({
   isOpen,
   onClose,
@@ -80,14 +109,31 @@ export function Modal({
   );
 }
 
+/**
+ * Props for the BottomSheet component
+ */
 interface BottomSheetProps {
+  /** Controls whether the bottom sheet is visible */
   isOpen: boolean;
+  /** Callback when the bottom sheet should close */
   onClose: () => void;
+  /** Content to display inside the bottom sheet */
   children: React.ReactNode;
+  /** Optional title displayed at the top */
   title?: string;
+  /** Additional CSS classes for the bottom sheet container */
   className?: string;
 }
 
+/**
+ * A mobile-friendly bottom drawer component with spring animation
+ *
+ * @example
+ * <BottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} title="Options">
+ *   <Button>Option 1</Button>
+ *   <Button>Option 2</Button>
+ * </BottomSheet>
+ */
 export function BottomSheet({ isOpen, onClose, children, title, className }: BottomSheetProps) {
   React.useEffect(() => {
     if (isOpen) {

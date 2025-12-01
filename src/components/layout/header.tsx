@@ -1,3 +1,16 @@
+/**
+ * Header Component
+ *
+ * Main navigation header with:
+ * - Logo and brand
+ * - Desktop navigation links
+ * - Search modal
+ * - User authentication state (login/register or profile menu)
+ * - Coin balance and VIP badge display
+ *
+ * @module components/layout/header
+ */
+
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +36,10 @@ import { formatNumber } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 import { useCoinStore } from '@/store/coin-store';
 
+/**
+ * Sticky header with navigation, search, and user controls
+ * Responsive design with mobile menu toggle
+ */
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

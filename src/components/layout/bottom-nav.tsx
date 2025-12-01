@@ -1,3 +1,13 @@
+/**
+ * BottomNav Component
+ *
+ * Mobile-only bottom navigation bar for primary app navigation.
+ * Automatically hides on reader pages for immersive reading.
+ * Redirects unauthenticated users to login for protected routes.
+ *
+ * @module components/layout/bottom-nav
+ */
+
 'use client';
 
 import { Home, TrendingUp, Grid, Library, User } from 'lucide-react';
@@ -7,6 +17,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 
+/** Navigation items configuration */
 const navItems = [
   { href: '/', icon: Home, label: '홈' },
   { href: '/ranking', icon: TrendingUp, label: '랭킹' },
@@ -15,6 +26,10 @@ const navItems = [
   { href: '/mypage', icon: User, label: '마이' },
 ];
 
+/**
+ * Fixed bottom navigation for mobile devices
+ * Hidden on desktop (md breakpoint) and reader pages
+ */
 export function BottomNav() {
   const pathname = usePathname();
   const { isAuthenticated } = useAuthStore();

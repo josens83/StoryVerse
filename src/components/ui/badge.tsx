@@ -1,8 +1,20 @@
+/**
+ * Badge Component
+ *
+ * A small label component for status indicators, tags, and metadata.
+ * Supports multiple semantic variants and sizes.
+ *
+ * @module components/ui/badge
+ */
+
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+/**
+ * Badge variant styles using class-variance-authority
+ */
 const badgeVariants = cva('inline-flex items-center rounded-full font-medium transition-colors', {
   variants: {
     variant: {
@@ -32,9 +44,28 @@ const badgeVariants = cva('inline-flex items-center rounded-full font-medium tra
   },
 });
 
+/**
+ * Props for the Badge component
+ * @extends React.HTMLAttributes<HTMLDivElement>
+ */
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
 
+/**
+ * A badge component for displaying status, labels, or counts
+ *
+ * @example
+ * // Default badge
+ * <Badge>Default</Badge>
+ *
+ * @example
+ * // VIP membership badge
+ * <Badge variant="vip">VIP</Badge>
+ *
+ * @example
+ * // Novel status badge
+ * <Badge variant="ongoing" size="sm">연재중</Badge>
+ */
 function Badge({ className, variant, size, ...props }: BadgeProps) {
   return <div className={cn(badgeVariants({ variant, size }), className)} {...props} />;
 }

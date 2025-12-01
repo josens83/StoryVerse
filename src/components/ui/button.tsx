@@ -1,8 +1,21 @@
+/**
+ * Button Component
+ *
+ * A flexible button component with multiple variants and sizes.
+ * Supports loading states with animated spinner.
+ *
+ * @module components/ui/button
+ */
+
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+/**
+ * Button variant styles using class-variance-authority
+ * @see https://cva.style/docs
+ */
 const buttonVariants = cva(
   'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
@@ -34,11 +47,31 @@ const buttonVariants = cva(
   }
 );
 
+/**
+ * Props for the Button component
+ * @extends React.ButtonHTMLAttributes<HTMLButtonElement>
+ */
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  /** Shows a loading spinner and disables the button */
   isLoading?: boolean;
 }
 
+/**
+ * A versatile button component with multiple style variants
+ *
+ * @example
+ * // Default button
+ * <Button>Click me</Button>
+ *
+ * @example
+ * // Loading state
+ * <Button isLoading>Submitting...</Button>
+ *
+ * @example
+ * // VIP gradient button
+ * <Button variant="vip" size="lg">Upgrade to VIP</Button>
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, isLoading, children, disabled, ...props }, ref) => {
     return (

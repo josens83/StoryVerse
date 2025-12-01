@@ -1,12 +1,42 @@
+/**
+ * Input Component
+ *
+ * A styled form input with optional label and error message support.
+ * Fully accessible with proper focus states and error styling.
+ *
+ * @module components/ui/input
+ */
+
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+/**
+ * Props for the Input component
+ * @extends React.InputHTMLAttributes<HTMLInputElement>
+ */
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  /** Error message to display below the input */
   error?: string;
+  /** Label text displayed above the input */
   label?: string;
 }
 
+/**
+ * A styled input component with label and error support
+ *
+ * @example
+ * // Basic input
+ * <Input placeholder="Enter your name" />
+ *
+ * @example
+ * // With label and error
+ * <Input
+ *   label="Email"
+ *   type="email"
+ *   error="Invalid email address"
+ * />
+ */
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, error, label, ...props }, ref) => {
     return (

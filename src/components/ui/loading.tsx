@@ -1,7 +1,23 @@
+/**
+ * Loading Components
+ *
+ * A collection of loading indicators for various use cases:
+ * - Spinner: Basic spinning loader
+ * - PageLoader: Full-page loading overlay
+ * - InlineLoader: Inline loading with text
+ * - ButtonLoader: Small loader for buttons
+ * - ContentLoader: Centered loader for content areas
+ * - LoadingDots: Animated dots indicator
+ * - TextPulse: Skeleton pulse for text placeholders
+ *
+ * @module components/ui/loading
+ */
+
 'use client';
 
 import { cn } from '@/lib/utils';
 
+/** Props for the Spinner component */
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;

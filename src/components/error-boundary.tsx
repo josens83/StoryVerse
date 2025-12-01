@@ -1,3 +1,12 @@
+/**
+ * Error Boundary Components
+ *
+ * React error boundaries for graceful error handling.
+ * Provides default fallback UI and optional error reporting.
+ *
+ * @module components/error-boundary
+ */
+
 'use client';
 
 import { Component, type ReactNode } from 'react';
@@ -5,12 +14,21 @@ import { Component, type ReactNode } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
+/**
+ * Props for the ErrorBoundary component
+ */
 interface ErrorBoundaryProps {
+  /** Child components to render */
   children: ReactNode;
+  /** Custom fallback UI when an error occurs */
   fallback?: ReactNode;
+  /** Callback for error reporting/logging */
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
+/**
+ * Internal state for ErrorBoundary
+ */
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
