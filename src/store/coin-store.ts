@@ -2,6 +2,8 @@
 
 import { create } from 'zustand';
 
+import { COINS, TIME } from '@/lib/constants';
+
 interface CoinState {
   purchasedCoins: number;
   earnedCoins: number;
@@ -43,7 +45,7 @@ export const useCoinStore = create<CoinState>((set, get) => ({
       }
       return {
         earnedCoins: state.earnedCoins + amount,
-        earnedCoinsExpireAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        earnedCoinsExpireAt: new Date(Date.now() + COINS.EARNED_EXPIRY_DAYS * TIME.DAY),
       };
     }),
 

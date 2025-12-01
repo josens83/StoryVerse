@@ -3,16 +3,16 @@ import { v4 as uuid } from 'uuid';
 import { z } from 'zod';
 
 import { hashPassword, generateToken, setAuthCookie } from '@/lib/auth';
-import { ERROR_MESSAGES } from '@/lib/constants';
+import { AUTH, COINS, TIME, ERROR_MESSAGES } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 
 const registerSchema = z.object({
   email: z.string().email(ERROR_MESSAGES.VALIDATION.INVALID_EMAIL),
   username: z
     .string()
-    .min(2, ERROR_MESSAGES.VALIDATION.USERNAME_MIN_LENGTH)
-    .max(20, ERROR_MESSAGES.VALIDATION.USERNAME_MAX_LENGTH),
-  password: z.string().min(8, ERROR_MESSAGES.VALIDATION.PASSWORD_MIN_LENGTH),
+    .min(AUTH.USERNAME_MIN_LENGTH, ERROR_MESSAGES.VALIDATION.USERNAME_MIN_LENGTH)
+    .max(AUTH.USERNAME_MAX_LENGTH, ERROR_MESSAGES.VALIDATION.USERNAME_MAX_LENGTH),
+  password: z.string().min(AUTH.PASSWORD_MIN_LENGTH, ERROR_MESSAGES.VALIDATION.PASSWORD_MIN_LENGTH),
 });
 
 export async function POST(request: NextRequest) {
@@ -62,8 +62,10 @@ export async function POST(request: NextRequest) {
         password_hash: passwordHash,
         tier: 'free',
         purchased_coins: 0,
-        earned_coins: 100, // Welcome bonus
-        earned_coins_expire_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        earned_coins: COINS.WELCOME_BONUS,
+        earned_coins_expire_at: new Date(
+          Date.now() + COINS.EARNED_EXPIRY_DAYS * TIME.DAY
+        ).toISOString(),
         total_read_time: 0,
         consecutive_checkins: 0,
       })
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
         },
         token,
       },
-      message: '회원가입이 완료되었습니다! 100코인이 지급되었습니다.',
+      message: `회원가입이 완료되었습니다! ${COINS.WELCOME_BONUS}코인이 지급되었습니다.`,
     });
 
     setAuthCookie(response, token);

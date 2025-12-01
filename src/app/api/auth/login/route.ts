@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { ApiErrors } from '@/lib/api-response';
 import { verifyPassword, generateToken, setAuthCookie } from '@/lib/auth';
-import { ERROR_MESSAGES } from '@/lib/constants';
+import { AUTH, ERROR_MESSAGES } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { rateLimit, getClientIp, validateContentType } from '@/lib/security';
 import { supabase } from '@/lib/supabase';
@@ -25,8 +25,12 @@ export async function POST(request: NextRequest) {
   const clientIp = getClientIp(request);
 
   try {
-    // Rate limiting for brute force protection (5 attempts per minute)
-    const rateLimitResult = rateLimit(`login:${clientIp}`, 5, 60000);
+    // Rate limiting for brute force protection
+    const rateLimitResult = rateLimit(
+      `login:${clientIp}`,
+      AUTH.LOGIN_MAX_ATTEMPTS,
+      AUTH.LOGIN_RATE_LIMIT_WINDOW
+    );
     if (!rateLimitResult.success) {
       logger.warn('Login rate limit exceeded', { ip: clientIp });
       return NextResponse.json(

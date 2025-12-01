@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { READER } from '@/lib/constants';
 import {
   type ReaderSettings,
   DEFAULT_READER_SETTINGS,
@@ -40,11 +41,21 @@ export const useReaderStore = create<ReaderState>()(
       currentProgress: 0,
 
       setTheme: (theme) => set({ theme }),
-      setFontSize: (fontSize) => set({ fontSize: Math.min(28, Math.max(14, fontSize)) }),
-      setLineHeight: (lineHeight) => set({ lineHeight: Math.min(2.5, Math.max(1.5, lineHeight)) }),
+      setFontSize: (fontSize) =>
+        set({ fontSize: Math.min(READER.FONT_SIZE_MAX, Math.max(READER.FONT_SIZE_MIN, fontSize)) }),
+      setLineHeight: (lineHeight) =>
+        set({
+          lineHeight: Math.min(
+            READER.LINE_HEIGHT_MAX,
+            Math.max(READER.LINE_HEIGHT_MIN, lineHeight)
+          ),
+        }),
       setFontFamily: (fontFamily) => set({ fontFamily }),
       setPageMode: (pageMode) => set({ pageMode }),
-      setBrightness: (brightness) => set({ brightness: Math.min(100, Math.max(0, brightness)) }),
+      setBrightness: (brightness) =>
+        set({
+          brightness: Math.min(READER.BRIGHTNESS_MAX, Math.max(READER.BRIGHTNESS_MIN, brightness)),
+        }),
       setAutoScroll: (autoScroll) => set({ autoScroll }),
       setAutoScrollSpeed: (autoScrollSpeed) => set({ autoScrollSpeed }),
       toggleSettings: () => set((state) => ({ isSettingsOpen: !state.isSettingsOpen })),
