@@ -1,18 +1,50 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
+import { ApiErrors } from '@/lib/api-response';
+import { logger } from '@/lib/logger';
+import { schemas, escapeSqlWildcards } from '@/lib/security';
 import { supabase } from '@/lib/supabase';
-import { type Genre } from '@/types';
 
+/**
+ * GET /api/novels
+ * Fetch novels with filtering, sorting, and pagination
+ *
+ * @description Retrieves a paginated list of novels with optional filtering and sorting
+ *
+ * Query Parameters:
+ * - page: number (default: 1) - Page number for pagination
+ * - limit: number (1-50, default: 20) - Items per page
+ * - genre: string (optional) - Filter by genre (fantasy, romance, action, etc.)
+ * - status: string (optional) - Filter by status (ongoing, completed, hiatus)
+ * - sort: string (default: 'latest') - Sort by (latest, popular, rating)
+ * - search: string (max 100 chars) - Search in title and synopsis
+ *
+ * @returns {Object} Paginated list of novels
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const genre = searchParams.get('genre') as Genre | null;
-    const status = searchParams.get('status');
-    const sort = searchParams.get('sort') || 'latest';
-    const search = searchParams.get('search');
 
+    // Validate and parse query parameters using Zod schema
+    const filterResult = schemas.novelFilters.safeParse({
+      page: searchParams.get('page') || undefined,
+      limit: searchParams.get('limit') || undefined,
+      genre: searchParams.get('genre') || undefined,
+      status: searchParams.get('status') || undefined,
+      sort: searchParams.get('sort') || undefined,
+      search: searchParams.get('search') || undefined,
+    });
+
+    if (!filterResult.success) {
+      const errorMessage = filterResult.error.issues[0]?.message ?? '잘못된 요청 파라미터입니다';
+      logger.warn('Invalid novel filter parameters', {
+        errors: filterResult.error.issues,
+        params: Object.fromEntries(searchParams.entries()),
+      });
+      return ApiErrors.badRequest(errorMessage);
+    }
+
+    const { page, limit, genre, status, sort, search } = filterResult.data;
     const offset = (page - 1) * limit;
 
     let query = supabase.from('novels').select(
@@ -32,8 +64,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status);
     }
 
+    // Apply search with SQL wildcard escaping for security
     if (search) {
-      query = query.or(`title.ilike.%${search}%,synopsis.ilike.%${search}%`);
+      const sanitizedSearch = escapeSqlWildcards(search);
+      query = query.or(`title.ilike.%${sanitizedSearch}%,synopsis.ilike.%${sanitizedSearch}%`);
     }
 
     // Apply sorting
@@ -56,11 +90,11 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('Get novels error:', error);
-      return NextResponse.json(
-        { success: false, error: '작품 목록을 불러오는데 실패했습니다' },
-        { status: 500 }
-      );
+      logger.error('Database error fetching novels', undefined, {
+        errorMessage: error.message,
+        errorCode: error.code,
+      });
+      return ApiErrors.internal();
     }
 
     const novels =
@@ -106,10 +140,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Get novels error:', error);
-    return NextResponse.json(
-      { success: false, error: '서버 오류가 발생했습니다' },
-      { status: 500 }
-    );
+    logger.error('Unexpected error in GET /api/novels', error instanceof Error ? error : undefined);
+    return ApiErrors.internal();
   }
 }

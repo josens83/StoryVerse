@@ -161,6 +161,33 @@ export function generateSecureToken(length: number = 32): string {
 }
 
 /**
+ * Valid genre values for novels
+ */
+export const VALID_GENRES = [
+  'fantasy',
+  'romance',
+  'action',
+  'thriller',
+  'martial_arts',
+  'modern',
+  'historical',
+  'sf',
+  'sports',
+  'bl',
+  'gl',
+] as const;
+
+/**
+ * Valid status values for novels
+ */
+export const VALID_STATUSES = ['ongoing', 'completed', 'hiatus'] as const;
+
+/**
+ * Valid sort options for novels
+ */
+export const VALID_SORT_OPTIONS = ['latest', 'popular', 'rating'] as const;
+
+/**
  * Common Zod schemas for validation
  */
 export const schemas = {
@@ -178,6 +205,17 @@ export const schemas = {
   }),
   search: z.string().max(100).optional(),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  genre: z.enum(VALID_GENRES).optional(),
+  novelStatus: z.enum(VALID_STATUSES).optional(),
+  novelSort: z.enum(VALID_SORT_OPTIONS).default('latest'),
+  novelFilters: z.object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+    genre: z.enum(VALID_GENRES).optional(),
+    status: z.enum(VALID_STATUSES).optional(),
+    sort: z.enum(VALID_SORT_OPTIONS).default('latest'),
+    search: z.string().max(100).optional(),
+  }),
 };
 
 /**

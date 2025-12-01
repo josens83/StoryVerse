@@ -4,7 +4,31 @@ import { type NextRequest, type NextResponse } from 'next/server';
 
 import { type User } from '@/types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'storyverse-secret-key-change-in-production';
+/**
+ * JWT Secret Key
+ * @throws Error if JWT_SECRET environment variable is not set in production
+ */
+function getJWTSecret(): string {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL: JWT_SECRET environment variable must be set in production');
+    }
+    // Development fallback - logs warning
+    console.warn('⚠️ JWT_SECRET not set. Using development default. Set JWT_SECRET in production!');
+    return 'dev-only-secret-DO-NOT-USE-IN-PRODUCTION';
+  }
+
+  // Validate secret strength (minimum 32 characters recommended)
+  if (secret.length < 32) {
+    console.warn('⚠️ JWT_SECRET should be at least 32 characters for security');
+  }
+
+  return secret;
+}
+
+const JWT_SECRET = getJWTSecret();
 const JWT_EXPIRES_IN = '7d';
 
 export interface JWTPayload {
