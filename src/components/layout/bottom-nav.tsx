@@ -1,8 +1,9 @@
 'use client';
 
+import { Home, TrendingUp, Grid, Library, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, TrendingUp, Grid, Library, User } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -19,19 +20,23 @@ export function BottomNav() {
   const { isAuthenticated } = useAuthStore();
 
   // Hide on reader page
-  if (pathname.startsWith('/reader')) return null;
+  if (pathname.startsWith('/reader')) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/90 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/90 md:hidden">
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           const Icon = item.icon;
 
           // Redirect to login if not authenticated for protected routes
-          const href = !isAuthenticated && (item.href === '/bookshelf' || item.href === '/mypage')
-            ? '/login'
-            : item.href;
+          const href =
+            !isAuthenticated && (item.href === '/bookshelf' || item.href === '/mypage')
+              ? '/login'
+              : item.href;
 
           return (
             <Link

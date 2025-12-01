@@ -1,32 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { BookOpen, Mail, Lock, User, Eye, EyeOff, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { BookOpen, Mail, Lock, User, Eye, EyeOff, Sparkles } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/toast';
 import { useAuthStore } from '@/store/auth-store';
 import { useCoinStore } from '@/store/coin-store';
-import { useToast } from '@/components/ui/toast';
 
-const registerSchema = z.object({
-  email: z.string().email('유효한 이메일을 입력해주세요'),
-  username: z
-    .string()
-    .min(2, '닉네임은 2자 이상이어야 합니다')
-    .max(20, '닉네임은 20자 이하여야 합니다'),
-  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
-  confirmPassword: z.string(),
-  agreeTerms: z.boolean().refine((val) => val === true, '약관에 동의해주세요'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: '비밀번호가 일치하지 않습니다',
-  path: ['confirmPassword'],
-});
+const registerSchema = z
+  .object({
+    email: z.string().email('유효한 이메일을 입력해주세요'),
+    username: z
+      .string()
+      .min(2, '닉네임은 2자 이상이어야 합니다')
+      .max(20, '닉네임은 20자 이하여야 합니다'),
+    password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
+    confirmPassword: z.string(),
+    agreeTerms: z.boolean().refine((val) => val === true, '약관에 동의해주세요'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: '비밀번호가 일치하지 않습니다',
+    path: ['confirmPassword'],
+  });
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
@@ -76,7 +79,7 @@ export default function RegisterPage() {
 
       addToast('success', result.message || '회원가입이 완료되었습니다!');
       router.push('/');
-    } catch (error) {
+    } catch {
       addToast('error', '서버 오류가 발생했습니다');
     } finally {
       setIsLoading(false);
@@ -93,9 +96,7 @@ export default function RegisterPage() {
             </div>
           </Link>
           <CardTitle className="text-2xl">회원가입</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            가입하고 100코인을 받으세요!
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">가입하고 100코인을 받으세요!</p>
         </CardHeader>
         <CardContent>
           {/* Welcome Bonus Banner */}
@@ -104,9 +105,7 @@ export default function RegisterPage() {
               <Sparkles className="h-5 w-5" />
               <span className="font-semibold">신규 가입 혜택</span>
             </div>
-            <p className="mt-1 text-sm text-white/80">
-              지금 가입하면 100코인이 즉시 지급됩니다!
-            </p>
+            <p className="mt-1 text-sm text-white/80">지금 가입하면 100코인이 즉시 지급됩니다!</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -186,9 +185,9 @@ export default function RegisterPage() {
                   에 동의합니다.
                 </span>
               </label>
-              {errors.agreeTerms && (
+              {errors.agreeTerms ? (
                 <p className="text-sm text-red-500">{errors.agreeTerms.message}</p>
-              )}
+              ) : null}
             </div>
 
             <Button type="submit" className="w-full" isLoading={isLoading}>

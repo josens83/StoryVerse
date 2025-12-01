@@ -1,27 +1,27 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   /* Brand Colors */
-  --primary: #FF6B35;
-  --secondary: #4ECDC4;
+  --primary: #ff6b35;
+  --secondary: #4ecdc4;
 
   /* Base */
   --background: #ffffff;
   --foreground: #171717;
 
   /* Coin */
-  --coin: #FFD700;
-  --vip: #9C27B0;
+  --coin: #ffd700;
+  --vip: #9c27b0;
 
   /* Reader Themes */
-  --reader-light-bg: #FFFFFF;
-  --reader-light-text: #1A1A1A;
-  --reader-dark-bg: #1A1A1A;
-  --reader-dark-text: #E5E5E5;
-  --reader-sepia-bg: #F4ECD8;
-  --reader-sepia-text: #5C4B37;
-  --reader-green-bg: #C8E6C9;
-  --reader-green-text: #1B5E20;
+  --reader-light-bg: #ffffff;
+  --reader-light-text: #1a1a1a;
+  --reader-dark-bg: #1a1a1a;
+  --reader-dark-text: #e5e5e5;
+  --reader-sepia-bg: #f4ecd8;
+  --reader-sepia-text: #5c4b37;
+  --reader-green-bg: #c8e6c9;
+  --reader-green-text: #1b5e20;
 }
 
 @theme inline {
@@ -98,8 +98,12 @@ body {
 
 /* Animation utilities */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -114,8 +118,13 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .animate-fade-in {

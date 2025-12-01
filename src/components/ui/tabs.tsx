@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface TabsContextValue {
@@ -96,7 +97,9 @@ interface TabsContentProps {
 export function TabsContent({ value, children, className }: TabsContentProps) {
   const { activeTab } = useTabs();
 
-  if (activeTab !== value) return null;
+  if (activeTab !== value) {
+    return null;
+  }
 
   return <div className={cn('mt-4', className)}>{children}</div>;
 }

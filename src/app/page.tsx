@@ -1,22 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { motion } from 'framer-motion';
-import {
-  TrendingUp,
-  Clock,
-  Star,
-  BookOpen,
-  ChevronRight,
-  Sparkles,
-  Crown,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { TrendingUp, Clock, Star, BookOpen, ChevronRight, Sparkles, Crown } from 'lucide-react';
+import Link from 'next/link';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useAuthStore } from '@/store/auth-store';
-import { GENRE_LABELS, Genre, Novel, Author } from '@/types';
 import { formatNumber } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth-store';
+import { GENRE_LABELS, type Genre, type Novel, type Author } from '@/types';
 
 // Mock data for demonstration
 const mockNovels: (Novel & { author: Author })[] = [
@@ -24,7 +17,22 @@ const mockNovels: (Novel & { author: Author })[] = [
     id: '1',
     title: '회귀한 천재 검사',
     authorId: 'a1',
-    author: { id: 'a1', userId: 'u1', penName: '글쓰는검사', tier: 'gold', totalNovels: 5, totalWords: 5000000, totalViews: 50000000, totalFollowers: 50000, totalRevenue: 0, revenueShareRate: 0.65, pendingRevenue: 0, withdrawableRevenue: 0, isExclusive: true, createdAt: new Date() },
+    author: {
+      id: 'a1',
+      userId: 'u1',
+      penName: '글쓰는검사',
+      tier: 'gold',
+      totalNovels: 5,
+      totalWords: 5000000,
+      totalViews: 50000000,
+      totalFollowers: 50000,
+      totalRevenue: 0,
+      revenueShareRate: 0.65,
+      pendingRevenue: 0,
+      withdrawableRevenue: 0,
+      isExclusive: true,
+      createdAt: new Date(),
+    },
     genre: 'regression',
     tags: ['회귀', '법조', '복수'],
     coverUrl: 'https://picsum.photos/seed/novel1/300/400',
@@ -48,7 +56,22 @@ const mockNovels: (Novel & { author: Author })[] = [
     id: '2',
     title: '재벌집 막내아들',
     authorId: 'a2',
-    author: { id: 'a2', userId: 'u2', penName: '산경작가', tier: 'platinum', totalNovels: 3, totalWords: 8000000, totalViews: 80000000, totalFollowers: 100000, totalRevenue: 0, revenueShareRate: 0.68, pendingRevenue: 0, withdrawableRevenue: 0, isExclusive: true, createdAt: new Date() },
+    author: {
+      id: 'a2',
+      userId: 'u2',
+      penName: '산경작가',
+      tier: 'platinum',
+      totalNovels: 3,
+      totalWords: 8000000,
+      totalViews: 80000000,
+      totalFollowers: 100000,
+      totalRevenue: 0,
+      revenueShareRate: 0.68,
+      pendingRevenue: 0,
+      withdrawableRevenue: 0,
+      isExclusive: true,
+      createdAt: new Date(),
+    },
     genre: 'modern',
     tags: ['현대', '재벌', '회귀'],
     coverUrl: 'https://picsum.photos/seed/novel2/300/400',
@@ -72,7 +95,22 @@ const mockNovels: (Novel & { author: Author })[] = [
     id: '3',
     title: '나 혼자만 레벨업',
     authorId: 'a3',
-    author: { id: 'a3', userId: 'u3', penName: '추공', tier: 'legendary', totalNovels: 2, totalWords: 3000000, totalViews: 200000000, totalFollowers: 500000, totalRevenue: 0, revenueShareRate: 0.7, pendingRevenue: 0, withdrawableRevenue: 0, isExclusive: false, createdAt: new Date() },
+    author: {
+      id: 'a3',
+      userId: 'u3',
+      penName: '추공',
+      tier: 'legendary',
+      totalNovels: 2,
+      totalWords: 3000000,
+      totalViews: 200000000,
+      totalFollowers: 500000,
+      totalRevenue: 0,
+      revenueShareRate: 0.7,
+      pendingRevenue: 0,
+      withdrawableRevenue: 0,
+      isExclusive: false,
+      createdAt: new Date(),
+    },
     genre: 'fantasy',
     tags: ['헌터', '성장', '먼치킨'],
     coverUrl: 'https://picsum.photos/seed/novel3/300/400',
@@ -96,7 +134,22 @@ const mockNovels: (Novel & { author: Author })[] = [
     id: '4',
     title: '전지적 독자 시점',
     authorId: 'a4',
-    author: { id: 'a4', userId: 'u4', penName: '싱숑', tier: 'legendary', totalNovels: 1, totalWords: 2500000, totalViews: 150000000, totalFollowers: 300000, totalRevenue: 0, revenueShareRate: 0.7, pendingRevenue: 0, withdrawableRevenue: 0, isExclusive: false, createdAt: new Date() },
+    author: {
+      id: 'a4',
+      userId: 'u4',
+      penName: '싱숑',
+      tier: 'legendary',
+      totalNovels: 1,
+      totalWords: 2500000,
+      totalViews: 150000000,
+      totalFollowers: 300000,
+      totalRevenue: 0,
+      revenueShareRate: 0.7,
+      pendingRevenue: 0,
+      withdrawableRevenue: 0,
+      isExclusive: false,
+      createdAt: new Date(),
+    },
     genre: 'fantasy',
     tags: ['판타지', '아포칼립스', '독자'],
     coverUrl: 'https://picsum.photos/seed/novel4/300/400',
@@ -131,11 +184,11 @@ function NovelCard({ novel }: { novel: Novel & { author: Author } }) {
             alt={novel.title}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          {novel.isExclusive && (
+          {novel.isExclusive ? (
             <Badge variant="exclusive" className="absolute left-2 top-2">
               독점
             </Badge>
-          )}
+          ) : null}
           <Badge
             variant={novel.status === 'completed' ? 'completed' : 'ongoing'}
             className="absolute right-2 top-2"
@@ -147,9 +200,7 @@ function NovelCard({ novel }: { novel: Novel & { author: Author } }) {
           <h3 className="line-clamp-1 font-semibold text-gray-900 dark:text-white">
             {novel.title}
           </h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {novel.author.penName}
-          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{novel.author.penName}</p>
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-0.5">
               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -168,21 +219,18 @@ function NovelCard({ novel }: { novel: Novel & { author: Author } }) {
 
 function HorizontalNovelCard({ novel, rank }: { novel: Novel & { author: Author }; rank: number }) {
   return (
-    <Link href={`/novel/${novel.id}`} className="group flex gap-3 rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+    <Link
+      href={`/novel/${novel.id}`}
+      className="group flex gap-3 rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+    >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center text-lg font-bold text-orange-500">
         {rank}
       </div>
       <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-lg">
-        <img
-          src={novel.coverUrl}
-          alt={novel.title}
-          className="h-full w-full object-cover"
-        />
+        <img src={novel.coverUrl} alt={novel.title} className="h-full w-full object-cover" />
       </div>
       <div className="flex-1 overflow-hidden">
-        <h4 className="line-clamp-1 font-medium text-gray-900 dark:text-white">
-          {novel.title}
-        </h4>
+        <h4 className="line-clamp-1 font-medium text-gray-900 dark:text-white">{novel.title}</h4>
         <p className="text-sm text-gray-500 dark:text-gray-400">{novel.author.penName}</p>
         <div className="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-0.5">
@@ -209,11 +257,11 @@ export default function Home() {
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold md:text-4xl">
-                {isAuthenticated ? `${user?.username}님, 환영합니다!` : '무료로 시작하는 웹소설의 세계'}
+                {isAuthenticated
+                  ? `${user?.username}님, 환영합니다!`
+                  : '무료로 시작하는 웹소설의 세계'}
               </h1>
-              <p className="mt-2 text-lg text-white/80">
-                매일 새로운 이야기를 만나보세요
-              </p>
+              <p className="mt-2 text-lg text-white/80">매일 새로운 이야기를 만나보세요</p>
             </div>
             <div className="flex gap-3">
               {!isAuthenticated && (
@@ -227,7 +275,10 @@ export default function Home() {
                 </>
               )}
               <Link href="/ranking">
-                <Button variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
+                <Button
+                  variant="outline"
+                  className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+                >
                   인기 랭킹 보기
                 </Button>
               </Link>
@@ -242,13 +293,19 @@ export default function Home() {
           <div className="flex gap-2">
             {genres.map((genre) => (
               <Link key={genre} href={`/genre?g=${genre}`}>
-                <Badge variant="outline" className="whitespace-nowrap px-4 py-2 text-sm hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20">
+                <Badge
+                  variant="outline"
+                  className="whitespace-nowrap px-4 py-2 text-sm hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20"
+                >
                   {GENRE_LABELS[genre]}
                 </Badge>
               </Link>
             ))}
             <Link href="/genre">
-              <Badge variant="outline" className="whitespace-nowrap px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
+              <Badge
+                variant="outline"
+                className="whitespace-nowrap px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
                 전체보기 <ChevronRight className="ml-1 inline h-3 w-3" />
               </Badge>
             </Link>
@@ -288,17 +345,22 @@ export default function Home() {
 
             <TabsContent value="new">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {mockNovels.slice().reverse().map((novel) => (
-                  <NovelCard key={novel.id} novel={novel} />
-                ))}
+                {mockNovels
+                  .slice()
+                  .reverse()
+                  .map((novel) => (
+                    <NovelCard key={novel.id} novel={novel} />
+                  ))}
               </div>
             </TabsContent>
 
             <TabsContent value="completed">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {mockNovels.filter(n => n.status === 'completed').map((novel) => (
-                  <NovelCard key={novel.id} novel={novel} />
-                ))}
+                {mockNovels
+                  .filter((n) => n.status === 'completed')
+                  .map((novel) => (
+                    <NovelCard key={novel.id} novel={novel} />
+                  ))}
               </div>
             </TabsContent>
           </Tabs>
@@ -335,9 +397,12 @@ export default function Home() {
                 평점 TOP
               </h3>
               <div className="space-y-2">
-                {[...mockNovels].sort((a, b) => b.rating - a.rating).slice(0, 5).map((novel, index) => (
-                  <HorizontalNovelCard key={novel.id} novel={novel} rank={index + 1} />
-                ))}
+                {[...mockNovels]
+                  .sort((a, b) => b.rating - a.rating)
+                  .slice(0, 5)
+                  .map((novel, index) => (
+                    <HorizontalNovelCard key={novel.id} novel={novel} rank={index + 1} />
+                  ))}
               </div>
             </div>
 
@@ -347,9 +412,12 @@ export default function Home() {
                 독점작
               </h3>
               <div className="space-y-2">
-                {mockNovels.filter(n => n.isExclusive).slice(0, 5).map((novel, index) => (
-                  <HorizontalNovelCard key={novel.id} novel={novel} rank={index + 1} />
-                ))}
+                {mockNovels
+                  .filter((n) => n.isExclusive)
+                  .slice(0, 5)
+                  .map((novel, index) => (
+                    <HorizontalNovelCard key={novel.id} novel={novel} rank={index + 1} />
+                  ))}
               </div>
             </div>
           </div>
@@ -394,7 +462,10 @@ export default function Home() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {GENRE_LABELS[genre]}
               </h2>
-              <Link href={`/genre?g=${genre}`} className="text-sm text-gray-500 hover:text-orange-500">
+              <Link
+                href={`/genre?g=${genre}`}
+                className="text-sm text-gray-500 hover:text-orange-500"
+              >
                 더보기 <ChevronRight className="inline h-4 w-4" />
               </Link>
             </div>

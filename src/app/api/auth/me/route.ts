@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
@@ -7,10 +8,7 @@ export async function GET(request: NextRequest) {
     const payload = getCurrentUser(request);
 
     if (!payload) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const { data: user, error } = await supabase
@@ -20,10 +18,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error || !user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
     return NextResponse.json({

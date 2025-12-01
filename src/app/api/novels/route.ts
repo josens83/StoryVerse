@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { supabase } from '@/lib/supabase';
-import { Genre } from '@/types';
+import { type Genre } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,12 +15,13 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * limit;
 
-    let query = supabase
-      .from('novels')
-      .select(`
+    let query = supabase.from('novels').select(
+      `
         *,
         author:authors(id, pen_name, tier)
-      `, { count: 'exact' });
+      `,
+      { count: 'exact' }
+    );
 
     // Apply filters
     if (genre) {
@@ -61,34 +63,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const novels = data?.map((novel) => ({
-      id: novel.id,
-      title: novel.title,
-      authorId: novel.author_id,
-      author: novel.author ? {
-        id: novel.author.id,
-        penName: novel.author.pen_name,
-        tier: novel.author.tier,
-      } : null,
-      genre: novel.genre,
-      tags: novel.tags || [],
-      coverUrl: novel.cover_url,
-      synopsis: novel.synopsis,
-      totalChapters: novel.total_chapters,
-      totalWords: novel.total_words,
-      viewCount: novel.view_count,
-      likeCount: novel.like_count,
-      favoriteCount: novel.favorite_count,
-      rating: novel.rating,
-      ratingCount: novel.rating_count,
-      status: novel.status,
-      isExclusive: novel.is_exclusive,
-      freeChapters: novel.free_chapters,
-      coinPrice: novel.coin_price,
-      createdAt: novel.created_at,
-      updatedAt: novel.updated_at,
-      lastChapterAt: novel.last_chapter_at,
-    })) || [];
+    const novels =
+      data?.map((novel) => ({
+        id: novel.id,
+        title: novel.title,
+        authorId: novel.author_id,
+        author: novel.author
+          ? {
+              id: novel.author.id,
+              penName: novel.author.pen_name,
+              tier: novel.author.tier,
+            }
+          : null,
+        genre: novel.genre,
+        tags: novel.tags || [],
+        coverUrl: novel.cover_url,
+        synopsis: novel.synopsis,
+        totalChapters: novel.total_chapters,
+        totalWords: novel.total_words,
+        viewCount: novel.view_count,
+        likeCount: novel.like_count,
+        favoriteCount: novel.favorite_count,
+        rating: novel.rating,
+        ratingCount: novel.rating_count,
+        status: novel.status,
+        isExclusive: novel.is_exclusive,
+        freeChapters: novel.free_chapters,
+        coinPrice: novel.coin_price,
+        createdAt: novel.created_at,
+        updatedAt: novel.updated_at,
+        lastChapterAt: novel.last_chapter_at,
+      })) || [];
 
     return NextResponse.json({
       success: true,

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { User } from '@/types';
+import jwt from 'jsonwebtoken';
+import { type NextRequest, type NextResponse } from 'next/server';
+
+import { type User } from '@/types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'storyverse-secret-key-change-in-production';
 const JWT_EXPIRES_IN = '7d';
@@ -45,7 +46,9 @@ export function getTokenFromRequest(request: NextRequest): string | null {
 
 export function getCurrentUser(request: NextRequest): JWTPayload | null {
   const token = getTokenFromRequest(request);
-  if (!token) return null;
+  if (!token) {
+    return null;
+  }
   return verifyToken(token);
 }
 

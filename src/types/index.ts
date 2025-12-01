@@ -76,7 +76,10 @@ export interface Author {
   verifiedAt?: Date;
 }
 
-export const AUTHOR_TIERS: Record<AuthorTier, { minWords: number; minFollowers?: number; revenueShare: number }> = {
+export const AUTHOR_TIERS: Record<
+  AuthorTier,
+  { minWords: number; minFollowers?: number; revenueShare: number }
+> = {
   newcomer: { minWords: 0, revenueShare: 0.5 },
   rising: { minWords: 100000, minFollowers: 100, revenueShare: 0.55 },
   established: { minWords: 500000, minFollowers: 1000, revenueShare: 0.6 },
@@ -166,15 +169,18 @@ export interface CoinTransaction {
 }
 
 // VIP Benefits
-export const VIP_BENEFITS: Record<UserTier, {
-  dailyFreeChapters: number;
-  adSkip: boolean;
-  waitFreeHours: number;
-  downloadEnabled: boolean;
-  exclusiveContent: boolean;
-  monthlyBonusCoins?: number;
-  authorDirectMessage?: boolean;
-}> = {
+export const VIP_BENEFITS: Record<
+  UserTier,
+  {
+    dailyFreeChapters: number;
+    adSkip: boolean;
+    waitFreeHours: number;
+    downloadEnabled: boolean;
+    exclusiveContent: boolean;
+    monthlyBonusCoins?: number;
+    authorDirectMessage?: boolean;
+  }
+> = {
   free: {
     dailyFreeChapters: 0,
     adSkip: false,
@@ -259,10 +265,40 @@ export interface VipPlan {
 }
 
 export const VIP_PLANS: VipPlan[] = [
-  { id: 'vip-monthly', name: 'VIP 월정액', tier: 'vip', period: 'monthly', price: 5900, bonusCoins: 200 },
-  { id: 'vip-yearly', name: 'VIP 연정액', tier: 'vip', period: 'yearly', price: 49900, originalPrice: 70800, bonusCoins: 3000 },
-  { id: 'svip-monthly', name: 'SVIP 월정액', tier: 'svip', period: 'monthly', price: 12900, bonusCoins: 500 },
-  { id: 'svip-yearly', name: 'SVIP 연정액', tier: 'svip', period: 'yearly', price: 109900, originalPrice: 154800, bonusCoins: 8000 },
+  {
+    id: 'vip-monthly',
+    name: 'VIP 월정액',
+    tier: 'vip',
+    period: 'monthly',
+    price: 5900,
+    bonusCoins: 200,
+  },
+  {
+    id: 'vip-yearly',
+    name: 'VIP 연정액',
+    tier: 'vip',
+    period: 'yearly',
+    price: 49900,
+    originalPrice: 70800,
+    bonusCoins: 3000,
+  },
+  {
+    id: 'svip-monthly',
+    name: 'SVIP 월정액',
+    tier: 'svip',
+    period: 'monthly',
+    price: 12900,
+    bonusCoins: 500,
+  },
+  {
+    id: 'svip-yearly',
+    name: 'SVIP 연정액',
+    tier: 'svip',
+    period: 'yearly',
+    price: 109900,
+    originalPrice: 154800,
+    bonusCoins: 8000,
+  },
 ];
 
 // Check-in Rewards

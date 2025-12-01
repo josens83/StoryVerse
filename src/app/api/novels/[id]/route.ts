@@ -1,19 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { supabase } from '@/lib/supabase';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
     const { data: novel, error } = await supabase
       .from('novels')
-      .select(`
+      .select(
+        `
         *,
         author:authors(*)
-      `)
+      `
+      )
       .eq('id', id)
       .single();
 
@@ -36,20 +36,22 @@ export async function GET(
         id: novel.id,
         title: novel.title,
         authorId: novel.author_id,
-        author: novel.author ? {
-          id: novel.author.id,
-          userId: novel.author.user_id,
-          penName: novel.author.pen_name,
-          bio: novel.author.bio,
-          tier: novel.author.tier,
-          totalNovels: novel.author.total_novels,
-          totalWords: novel.author.total_words,
-          totalViews: novel.author.total_views,
-          totalFollowers: novel.author.total_followers,
-          isExclusive: novel.author.is_exclusive,
-          createdAt: novel.author.created_at,
-          verifiedAt: novel.author.verified_at,
-        } : null,
+        author: novel.author
+          ? {
+              id: novel.author.id,
+              userId: novel.author.user_id,
+              penName: novel.author.pen_name,
+              bio: novel.author.bio,
+              tier: novel.author.tier,
+              totalNovels: novel.author.total_novels,
+              totalWords: novel.author.total_words,
+              totalViews: novel.author.total_views,
+              totalFollowers: novel.author.total_followers,
+              isExclusive: novel.author.is_exclusive,
+              createdAt: novel.author.created_at,
+              verifiedAt: novel.author.verified_at,
+            }
+          : null,
         genre: novel.genre,
         tags: novel.tags || [],
         coverUrl: novel.cover_url,

@@ -1,12 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+import { type NextRequest, NextResponse } from 'next/server';
 import { v4 as uuid } from 'uuid';
+import { z } from 'zod';
+
 import { hashPassword, generateToken, setAuthCookie } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
 const registerSchema = z.object({
   email: z.string().email('유효한 이메일을 입력해주세요'),
-  username: z.string().min(2, '닉네임은 2자 이상이어야 합니다').max(20, '닉네임은 20자 이하여야 합니다'),
+  username: z
+    .string()
+    .min(2, '닉네임은 2자 이상이어야 합니다')
+    .max(20, '닉네임은 20자 이하여야 합니다'),
   password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
 });
 
@@ -106,8 +110,9 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const firstIssue = error.issues[0];
       return NextResponse.json(
-        { success: false, error: error.errors[0].message },
+        { success: false, error: firstIssue?.message ?? '유효성 검사 오류' },
         { status: 400 }
       );
     }

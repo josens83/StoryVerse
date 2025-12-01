@@ -1,10 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { supabase } from '@/lib/supabase';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -16,7 +14,10 @@ export async function GET(
 
     const { data, error, count } = await supabase
       .from('chapters')
-      .select('id, novel_id, number, title, word_count, access_type, coin_price, free_at, view_count, like_count, comment_count, published_at, created_at', { count: 'exact' })
+      .select(
+        'id, novel_id, number, title, word_count, access_type, coin_price, free_at, view_count, like_count, comment_count, published_at, created_at',
+        { count: 'exact' }
+      )
       .eq('novel_id', id)
       .order('number', { ascending: order === 'asc' })
       .range(offset, offset + limit - 1);
@@ -29,21 +30,22 @@ export async function GET(
       );
     }
 
-    const chapters = data?.map((chapter) => ({
-      id: chapter.id,
-      novelId: chapter.novel_id,
-      number: chapter.number,
-      title: chapter.title,
-      wordCount: chapter.word_count,
-      accessType: chapter.access_type,
-      coinPrice: chapter.coin_price,
-      freeAt: chapter.free_at,
-      viewCount: chapter.view_count,
-      likeCount: chapter.like_count,
-      commentCount: chapter.comment_count,
-      publishedAt: chapter.published_at,
-      createdAt: chapter.created_at,
-    })) || [];
+    const chapters =
+      data?.map((chapter) => ({
+        id: chapter.id,
+        novelId: chapter.novel_id,
+        number: chapter.number,
+        title: chapter.title,
+        wordCount: chapter.word_count,
+        accessType: chapter.access_type,
+        coinPrice: chapter.coin_price,
+        freeAt: chapter.free_at,
+        viewCount: chapter.view_count,
+        likeCount: chapter.like_count,
+        commentCount: chapter.comment_count,
+        publishedAt: chapter.published_at,
+        createdAt: chapter.created_at,
+      })) || [];
 
     return NextResponse.json({
       success: true,

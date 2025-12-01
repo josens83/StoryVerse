@@ -2,7 +2,14 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ReaderSettings, DEFAULT_READER_SETTINGS, ReaderTheme, FontFamily, PageMode } from '@/types';
+
+import {
+  type ReaderSettings,
+  DEFAULT_READER_SETTINGS,
+  type ReaderTheme,
+  type FontFamily,
+  type PageMode,
+} from '@/types';
 
 interface ReaderState extends ReaderSettings {
   isSettingsOpen: boolean;

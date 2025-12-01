@@ -51,7 +51,9 @@ export const useCoinStore = create<CoinState>((set, get) => ({
     const state = get();
     const total = state.purchasedCoins + state.earnedCoins;
 
-    if (total < amount) return false;
+    if (total < amount) {
+      return false;
+    }
 
     // Spend earned coins first, then purchased
     let remaining = amount;

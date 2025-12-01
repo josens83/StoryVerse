@@ -1,19 +1,47 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create client only if env vars are available
+let supabaseInstance: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (!supabaseInstance) {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error(
+        'Supabase URL and Anon Key are required. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+      );
+    }
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  }
+  return supabaseInstance;
+}
+
+// Lazy-loaded supabase for client components
+// Note: In server components, use getSupabase() directly
+export const supabase =
+  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : (null as never);
 
 // Server-side client with service role
-export function createServerClient() {
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+export function createServerClient(): SupabaseClient {
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error(
+      'Supabase URL and Service Role Key are required. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
+    );
+  }
   return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+}
+
+// Check if Supabase is configured
+export function isSupabaseConfigured(): boolean {
+  return Boolean(supabaseUrl && supabaseAnonKey);
 }
 
 // Database types
@@ -88,7 +116,10 @@ export type Database = {
           updated_at: string;
           last_chapter_at: string | null;
         };
-        Insert: Omit<Database['public']['Tables']['novels']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Insert: Omit<
+          Database['public']['Tables']['novels']['Row'],
+          'id' | 'created_at' | 'updated_at'
+        >;
         Update: Partial<Database['public']['Tables']['novels']['Insert']>;
       };
       chapters: {

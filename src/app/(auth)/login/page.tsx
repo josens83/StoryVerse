@@ -1,18 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { BookOpen, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { BookOpen, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/toast';
 import { useAuthStore } from '@/store/auth-store';
 import { useCoinStore } from '@/store/coin-store';
-import { useToast } from '@/components/ui/toast';
 
 const loginSchema = z.object({
   email: z.string().email('유효한 이메일을 입력해주세요'),
@@ -62,7 +63,7 @@ export default function LoginPage() {
 
       addToast('success', '로그인되었습니다');
       router.push('/');
-    } catch (error) {
+    } catch {
       addToast('error', '서버 오류가 발생했습니다');
     } finally {
       setIsLoading(false);

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+
 import { verifyPassword, generateToken, setAuthCookie } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
@@ -78,8 +79,9 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const firstIssue = error.issues[0];
       return NextResponse.json(
-        { success: false, error: error.errors[0].message },
+        { success: false, error: firstIssue?.message ?? '유효성 검사 오류' },
         { status: 400 }
       );
     }

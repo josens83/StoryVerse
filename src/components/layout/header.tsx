@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -17,10 +15,13 @@ import {
   LogOut,
   Settings,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
+import { formatNumber } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 import { useCoinStore } from '@/store/coin-store';
-import { formatNumber } from '@/lib/utils';
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -110,14 +111,18 @@ export function Header() {
                   className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
                 >
                   {user.avatar ? (
-                    <img src={user.avatar} alt={user.username} className="h-full w-full rounded-full object-cover" />
+                    <img
+                      src={user.avatar}
+                      alt={user.username}
+                      className="h-full w-full rounded-full object-cover"
+                    />
                   ) : (
                     <User className="h-5 w-5" />
                   )}
                 </button>
 
                 <AnimatePresence>
-                  {isProfileMenuOpen && (
+                  {isProfileMenuOpen ? (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -160,7 +165,7 @@ export function Header() {
                         로그아웃
                       </button>
                     </motion.div>
-                  )}
+                  ) : null}
                 </AnimatePresence>
               </div>
             </>
@@ -189,7 +194,7 @@ export function Header() {
 
       {/* Search Modal */}
       <AnimatePresence>
-        {isSearchOpen && (
+        {isSearchOpen ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -223,7 +228,7 @@ export function Header() {
               </div>
             </motion.div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </header>
   );

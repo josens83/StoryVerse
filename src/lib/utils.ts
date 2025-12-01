@@ -6,14 +6,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatNumber(num: number): string {
+  const formatWithUnit = (value: number, unit: string): string => {
+    const fixed = value.toFixed(1);
+    // Remove unnecessary .0 - use parseFloat to handle rounding correctly
+    const parsed = parseFloat(fixed);
+    return fixed.endsWith('.0') ? `${Math.round(parsed)}${unit}` : `${fixed}${unit}`;
+  };
+
   if (num >= 100000000) {
-    return `${(num / 100000000).toFixed(1)}억`;
+    return formatWithUnit(num / 100000000, '억');
   }
   if (num >= 10000) {
-    return `${(num / 10000).toFixed(1)}만`;
+    return formatWithUnit(num / 10000, '만');
   }
   if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}천`;
+    return formatWithUnit(num / 1000, '천');
   }
   return num.toLocaleString();
 }
@@ -26,7 +33,10 @@ export function formatPrice(price: number): string {
   }).format(price);
 }
 
-export function formatDate(date: Date | string, format: 'short' | 'long' | 'relative' = 'short'): string {
+export function formatDate(
+  date: Date | string,
+  format: 'short' | 'long' | 'relative' = 'short'
+): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diff = now.getTime() - d.getTime();
@@ -36,12 +46,24 @@ export function formatDate(date: Date | string, format: 'short' | 'long' | 'rela
   const days = Math.floor(hours / 24);
 
   if (format === 'relative') {
-    if (seconds < 60) return '방금 전';
-    if (minutes < 60) return `${minutes}분 전`;
-    if (hours < 24) return `${hours}시간 전`;
-    if (days < 7) return `${days}일 전`;
-    if (days < 30) return `${Math.floor(days / 7)}주 전`;
-    if (days < 365) return `${Math.floor(days / 30)}개월 전`;
+    if (seconds < 60) {
+      return '방금 전';
+    }
+    if (minutes < 60) {
+      return `${minutes}분 전`;
+    }
+    if (hours < 24) {
+      return `${hours}시간 전`;
+    }
+    if (days < 7) {
+      return `${days}일 전`;
+    }
+    if (days < 30) {
+      return `${Math.floor(days / 7)}주 전`;
+    }
+    if (days < 365) {
+      return `${Math.floor(days / 30)}개월 전`;
+    }
     return `${Math.floor(days / 365)}년 전`;
   }
 
@@ -66,7 +88,9 @@ export function formatCountdown(targetDate: Date): string {
   const now = new Date();
   const diff = targetDate.getTime() - now.getTime();
 
-  if (diff <= 0) return '해금됨';
+  if (diff <= 0) {
+    return '해금됨';
+  }
 
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -79,16 +103,22 @@ export function formatCountdown(targetDate: Date): string {
 }
 
 export function formatReadingTime(minutes: number): string {
-  if (minutes < 60) return `${minutes}분`;
+  if (minutes < 60) {
+    return `${minutes}분`;
+  }
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  if (mins === 0) return `${hours}시간`;
+  if (mins === 0) {
+    return `${hours}시간`;
+  }
   return `${hours}시간 ${mins}분`;
 }
 
 export function formatWordCount(words: number): string {
   if (words >= 10000) {
-    return `${(words / 10000).toFixed(1)}만자`;
+    const value = words / 10000;
+    const fixed = value.toFixed(1);
+    return fixed.endsWith('.0') ? `${Math.floor(value)}만자` : `${fixed}만자`;
   }
   return `${words.toLocaleString()}자`;
 }
@@ -111,12 +141,16 @@ export function generateSlug(title: string): string {
 }
 
 export function calculateReadingProgress(currentChapter: number, totalChapters: number): number {
-  if (totalChapters === 0) return 0;
+  if (totalChapters === 0) {
+    return 0;
+  }
   return Math.round((currentChapter / totalChapters) * 100);
 }
 
 export function isVipExpired(expiresAt?: Date | null): boolean {
-  if (!expiresAt) return true;
+  if (!expiresAt) {
+    return true;
+  }
   return new Date(expiresAt) < new Date();
 }
 
@@ -126,7 +160,9 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
   return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
+    if (timeout) {
+      clearTimeout(timeout);
+    }
     timeout = setTimeout(() => func(...args), wait);
   };
 }

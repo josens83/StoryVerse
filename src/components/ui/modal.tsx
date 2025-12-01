@@ -1,8 +1,9 @@
 'use client';
 
-import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import * as React from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface ModalProps {
@@ -37,7 +38,7 @@ export function Modal({
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen ? (
         <>
           <motion.div
             initial={{ opacity: 0 }}
@@ -55,26 +56,26 @@ export function Modal({
               className
             )}
           >
-            {showCloseButton && (
+            {showCloseButton ? (
               <button
                 onClick={onClose}
                 className="absolute right-4 top-4 rounded-lg p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
               >
                 <X className="h-5 w-5" />
               </button>
-            )}
-            {title && (
+            ) : null}
+            {title ? (
               <div className="mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
-                {description && (
+                {description ? (
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
             {children}
           </motion.div>
         </>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }
@@ -101,7 +102,7 @@ export function BottomSheet({ isOpen, onClose, children, title, className }: Bot
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen ? (
         <>
           <motion.div
             initial={{ opacity: 0 }}
@@ -123,15 +124,15 @@ export function BottomSheet({ isOpen, onClose, children, title, className }: Bot
             <div className="sticky top-0 flex items-center justify-center py-3">
               <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
             </div>
-            {title && (
+            {title ? (
               <div className="border-b border-gray-200 px-4 pb-3 dark:border-gray-800">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
               </div>
-            )}
+            ) : null}
             <div className="p-4">{children}</div>
           </motion.div>
         </>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }
