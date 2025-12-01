@@ -3,6 +3,8 @@
  * Domain logic for novel-related operations
  */
 
+import { WAIT_FREE } from '@/lib/constants';
+
 import type { Novel, AccessType, UnlockMethod } from '@/types';
 
 // Service result types
@@ -27,6 +29,28 @@ export interface ChapterUnlockStatus {
   coinPrice: number;
 }
 
+// Access type configuration (reduces cyclomatic complexity)
+type AccessConfig = Pick<
+  ChapterUnlockStatus,
+  'canWaitFree' | 'canUnlockWithAd' | 'canUnlockWithCoins'
+>;
+
+const ACCESS_TYPE_CONFIG: Record<AccessType, AccessConfig> = {
+  free: { canWaitFree: false, canUnlockWithAd: false, canUnlockWithCoins: false },
+  ad_unlock: { canWaitFree: true, canUnlockWithAd: true, canUnlockWithCoins: true },
+  wait_free: { canWaitFree: true, canUnlockWithAd: false, canUnlockWithCoins: true },
+  coin: { canWaitFree: false, canUnlockWithAd: false, canUnlockWithCoins: true },
+  vip: { canWaitFree: false, canUnlockWithAd: false, canUnlockWithCoins: true },
+};
+
+const UNLOCKED_STATUS: Omit<ChapterUnlockStatus, 'method' | 'waitFreeUnlocksAt'> = {
+  isUnlocked: true,
+  canWaitFree: false,
+  canUnlockWithAd: false,
+  canUnlockWithCoins: false,
+  coinPrice: 0,
+};
+
 /**
  * Get chapter access requirements based on access type and user tier
  */
@@ -35,98 +59,43 @@ export function getChapterAccessRequirements(
   userTier: 'free' | 'vip' | 'svip',
   coinPrice: number
 ): ChapterUnlockStatus {
-  // SVIP gets everything free
+  // SVIP gets everything free except coin-only content
   if (userTier === 'svip' && accessType !== 'coin') {
-    return {
-      isUnlocked: true,
-      canWaitFree: false,
-      canUnlockWithAd: false,
-      canUnlockWithCoins: false,
-      coinPrice: 0,
-    };
+    return { ...UNLOCKED_STATUS };
   }
 
-  // VIP benefits
+  // VIP gets VIP content free
   if (userTier === 'vip' && accessType === 'vip') {
-    return {
-      isUnlocked: true,
-      canWaitFree: false,
-      canUnlockWithAd: false,
-      canUnlockWithCoins: false,
-      coinPrice: 0,
-    };
+    return { ...UNLOCKED_STATUS };
   }
 
-  // Check by access type
-  switch (accessType) {
-    case 'free':
-      return {
-        isUnlocked: true,
-        canWaitFree: false,
-        canUnlockWithAd: false,
-        canUnlockWithCoins: false,
-        coinPrice: 0,
-      };
-
-    case 'ad_unlock':
-      return {
-        isUnlocked: false,
-        canWaitFree: true,
-        canUnlockWithAd: true,
-        canUnlockWithCoins: true,
-        coinPrice,
-      };
-
-    case 'wait_free':
-      return {
-        isUnlocked: false,
-        canWaitFree: true,
-        canUnlockWithAd: false,
-        canUnlockWithCoins: true,
-        coinPrice,
-      };
-
-    case 'coin':
-      return {
-        isUnlocked: false,
-        canWaitFree: false,
-        canUnlockWithAd: false,
-        canUnlockWithCoins: true,
-        coinPrice,
-      };
-
-    case 'vip':
-      return {
-        isUnlocked: false,
-        canWaitFree: false,
-        canUnlockWithAd: false,
-        canUnlockWithCoins: true,
-        coinPrice,
-      };
-
-    default:
-      return {
-        isUnlocked: false,
-        canWaitFree: false,
-        canUnlockWithAd: false,
-        canUnlockWithCoins: true,
-        coinPrice,
-      };
+  // Free content is always unlocked
+  if (accessType === 'free') {
+    return { ...UNLOCKED_STATUS };
   }
+
+  // Use config lookup for locked content
+  const config = ACCESS_TYPE_CONFIG[accessType] ?? ACCESS_TYPE_CONFIG.coin;
+  return {
+    isUnlocked: false,
+    ...config,
+    coinPrice,
+  };
 }
+
+// Wait-free hours by tier (uses centralized constants)
+const WAIT_FREE_HOURS: Record<'free' | 'vip' | 'svip', number> = {
+  free: WAIT_FREE.FREE_TIER_HOURS,
+  vip: WAIT_FREE.VIP_TIER_HOURS,
+  svip: WAIT_FREE.SVIP_TIER_HOURS,
+};
 
 /**
  * Calculate wait-free unlock time based on user tier
  */
 export function getWaitFreeUnlockTime(startTime: Date, userTier: 'free' | 'vip' | 'svip'): Date {
-  const hours = {
-    free: 24,
-    vip: 12,
-    svip: 6,
-  };
-
   const unlockTime = new Date(startTime);
-  unlockTime.setHours(unlockTime.getHours() + hours[userTier]);
+  unlockTime.setHours(unlockTime.getHours() + WAIT_FREE_HOURS[userTier]);
   return unlockTime;
 }
 

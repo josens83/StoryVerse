@@ -5,22 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Threshold configuration for number formatting (reduces cyclomatic complexity)
+const NUMBER_THRESHOLDS = [
+  { min: 100_000_000, divisor: 100_000_000, unit: '억' },
+  { min: 10_000, divisor: 10_000, unit: '만' },
+  { min: 1_000, divisor: 1_000, unit: '천' },
+] as const;
+
 export function formatNumber(num: number): string {
   const formatWithUnit = (value: number, unit: string): string => {
     const fixed = value.toFixed(1);
-    // Remove unnecessary .0 - use parseFloat to handle rounding correctly
     const parsed = parseFloat(fixed);
     return fixed.endsWith('.0') ? `${Math.round(parsed)}${unit}` : `${fixed}${unit}`;
   };
 
-  if (num >= 100000000) {
-    return formatWithUnit(num / 100000000, '억');
-  }
-  if (num >= 10000) {
-    return formatWithUnit(num / 10000, '만');
-  }
-  if (num >= 1000) {
-    return formatWithUnit(num / 1000, '천');
+  const threshold = NUMBER_THRESHOLDS.find((t) => num >= t.min);
+  if (threshold) {
+    return formatWithUnit(num / threshold.divisor, threshold.unit);
   }
   return num.toLocaleString();
 }
@@ -33,38 +34,33 @@ export function formatPrice(price: number): string {
   }).format(price);
 }
 
+// Relative time thresholds (reduces cyclomatic complexity in formatDate)
+const RELATIVE_TIME_THRESHOLDS = [
+  { maxSeconds: 60, format: () => '방금 전' },
+  { maxSeconds: 3600, format: (s: number) => `${Math.floor(s / 60)}분 전` },
+  { maxSeconds: 86400, format: (s: number) => `${Math.floor(s / 3600)}시간 전` },
+  { maxSeconds: 604800, format: (s: number) => `${Math.floor(s / 86400)}일 전` },
+  { maxSeconds: 2592000, format: (s: number) => `${Math.floor(s / 604800)}주 전` },
+  { maxSeconds: 31536000, format: (s: number) => `${Math.floor(s / 2592000)}개월 전` },
+] as const;
+
+function formatRelativeTime(seconds: number): string {
+  const threshold = RELATIVE_TIME_THRESHOLDS.find((t) => seconds < t.maxSeconds);
+  if (threshold) {
+    return threshold.format(seconds);
+  }
+  return `${Math.floor(seconds / 31536000)}년 전`;
+}
+
 export function formatDate(
   date: Date | string,
   format: 'short' | 'long' | 'relative' = 'short'
 ): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
 
   if (format === 'relative') {
-    if (seconds < 60) {
-      return '방금 전';
-    }
-    if (minutes < 60) {
-      return `${minutes}분 전`;
-    }
-    if (hours < 24) {
-      return `${hours}시간 전`;
-    }
-    if (days < 7) {
-      return `${days}일 전`;
-    }
-    if (days < 30) {
-      return `${Math.floor(days / 7)}주 전`;
-    }
-    if (days < 365) {
-      return `${Math.floor(days / 30)}개월 전`;
-    }
-    return `${Math.floor(days / 365)}년 전`;
+    const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+    return formatRelativeTime(seconds);
   }
 
   if (format === 'long') {
