@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server';
 
+import { ERROR_MESSAGES } from './constants';
 import { securityHeaders } from './security';
 
 // API Response types
@@ -116,23 +117,25 @@ export function apiPaginated<T>(
 
 /**
  * Common error responses
+ * Uses centralized error messages from ERROR_MESSAGES
  */
 export const ApiErrors = {
   /** Authentication required (no token or invalid token) */
-  unauthorized: (message = '인증이 필요합니다') =>
+  unauthorized: (message = ERROR_MESSAGES.AUTH.UNAUTHORIZED) =>
     apiError(message, 401, ErrorCodes.AUTHENTICATION_REQUIRED),
 
   /** User authenticated but lacks permission */
-  forbidden: (message = '접근 권한이 없습니다') => apiError(message, 403, ErrorCodes.FORBIDDEN),
+  forbidden: (message = ERROR_MESSAGES.PERMISSION.FORBIDDEN) =>
+    apiError(message, 403, ErrorCodes.FORBIDDEN),
 
   /** Resource not found */
   notFound: (resource = '리소스') =>
-    apiError(`${resource}를 찾을 수 없습니다`, 404, ErrorCodes.NOT_FOUND),
+    apiError(ERROR_MESSAGES.RESOURCE.NOT_FOUND(resource), 404, ErrorCodes.NOT_FOUND),
 
   /** Too many requests */
   rateLimited: (retryAfter?: number) =>
     apiError(
-      '요청이 너무 많습니다. 잠시 후 다시 시도해주세요',
+      ERROR_MESSAGES.SERVER.RATE_LIMITED,
       429,
       ErrorCodes.RATE_LIMITED,
       retryAfter ? { retryAfter } : undefined
@@ -142,11 +145,12 @@ export const ApiErrors = {
   validation: (message: string) => apiError(message, 400, ErrorCodes.VALIDATION_ERROR),
 
   /** Internal server error */
-  internal: (message = '서버 오류가 발생했습니다') =>
+  internal: (message = ERROR_MESSAGES.SERVER.INTERNAL_ERROR) =>
     apiError(message, 500, ErrorCodes.INTERNAL_ERROR),
 
   /** Not enough coins for operation */
-  insufficientCoins: () => apiError('코인이 부족합니다', 400, ErrorCodes.INSUFFICIENT_COINS),
+  insufficientCoins: () =>
+    apiError(ERROR_MESSAGES.COIN.INSUFFICIENT, 400, ErrorCodes.INSUFFICIENT_COINS),
 
   /** Bad request with custom message */
   badRequest: (message: string) => apiError(message, 400, ErrorCodes.BAD_REQUEST),

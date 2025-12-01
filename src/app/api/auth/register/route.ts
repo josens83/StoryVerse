@@ -3,15 +3,16 @@ import { v4 as uuid } from 'uuid';
 import { z } from 'zod';
 
 import { hashPassword, generateToken, setAuthCookie } from '@/lib/auth';
+import { ERROR_MESSAGES } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 
 const registerSchema = z.object({
-  email: z.string().email('유효한 이메일을 입력해주세요'),
+  email: z.string().email(ERROR_MESSAGES.VALIDATION.INVALID_EMAIL),
   username: z
     .string()
-    .min(2, '닉네임은 2자 이상이어야 합니다')
-    .max(20, '닉네임은 20자 이하여야 합니다'),
-  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
+    .min(2, ERROR_MESSAGES.VALIDATION.USERNAME_MIN_LENGTH)
+    .max(20, ERROR_MESSAGES.VALIDATION.USERNAME_MAX_LENGTH),
+  password: z.string().min(8, ERROR_MESSAGES.VALIDATION.PASSWORD_MIN_LENGTH),
 });
 
 export async function POST(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (existingEmail) {
       return NextResponse.json(
-        { success: false, error: '이미 사용 중인 이메일입니다' },
+        { success: false, error: ERROR_MESSAGES.REGISTER.EMAIL_EXISTS },
         { status: 400 }
       );
     }
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUsername) {
       return NextResponse.json(
-        { success: false, error: '이미 사용 중인 닉네임입니다' },
+        { success: false, error: ERROR_MESSAGES.REGISTER.USERNAME_EXISTS },
         { status: 400 }
       );
     }
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Register error:', error);
       return NextResponse.json(
-        { success: false, error: '회원가입에 실패했습니다' },
+        { success: false, error: ERROR_MESSAGES.REGISTER.FAILED },
         { status: 500 }
       );
     }
@@ -112,13 +113,16 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       const firstIssue = error.issues[0];
       return NextResponse.json(
-        { success: false, error: firstIssue?.message ?? '유효성 검사 오류' },
+        {
+          success: false,
+          error: firstIssue?.message ?? ERROR_MESSAGES.VALIDATION.VALIDATION_ERROR,
+        },
         { status: 400 }
       );
     }
     console.error('Register error:', error);
     return NextResponse.json(
-      { success: false, error: '서버 오류가 발생했습니다' },
+      { success: false, error: ERROR_MESSAGES.SERVER.INTERNAL_ERROR },
       { status: 500 }
     );
   }

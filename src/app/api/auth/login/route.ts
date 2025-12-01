@@ -3,13 +3,14 @@ import { z } from 'zod';
 
 import { ApiErrors } from '@/lib/api-response';
 import { verifyPassword, generateToken, setAuthCookie } from '@/lib/auth';
+import { ERROR_MESSAGES } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { rateLimit, getClientIp, validateContentType } from '@/lib/security';
 import { supabase } from '@/lib/supabase';
 
 const loginSchema = z.object({
-  email: z.string().email('유효한 이메일을 입력해주세요'),
-  password: z.string().min(1, '비밀번호를 입력해주세요'),
+  email: z.string().email(ERROR_MESSAGES.VALIDATION.INVALID_EMAIL),
+  password: z.string().min(1, ERROR_MESSAGES.VALIDATION.PASSWORD_REQUIRED),
 });
 
 /**
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: '너무 많은 로그인 시도입니다. 잠시 후 다시 시도해주세요.',
+          error: ERROR_MESSAGES.AUTH.RATE_LIMITED,
         },
         {
           status: 429,
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Content-Type validation
     if (!validateContentType(request)) {
-      return ApiErrors.badRequest('Content-Type must be application/json');
+      return ApiErrors.badRequest(ERROR_MESSAGES.VALIDATION.CONTENT_TYPE_JSON);
     }
 
     const body = await request.json();
@@ -61,19 +62,19 @@ export async function POST(request: NextRequest) {
     if (error || !user) {
       // Use generic message to prevent email enumeration
       logger.info('Login failed: user not found', { email: email.slice(0, 3) + '***' });
-      return ApiErrors.unauthorized('이메일 또는 비밀번호가 올바르지 않습니다');
+      return ApiErrors.unauthorized(ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
     // Verify password
     if (!user.password_hash) {
       logger.info('Login failed: social account', { userId: user.id });
-      return ApiErrors.unauthorized('소셜 로그인으로 가입된 계정입니다');
+      return ApiErrors.unauthorized(ERROR_MESSAGES.AUTH.SOCIAL_LOGIN_ACCOUNT);
     }
 
     const isValid = await verifyPassword(password, user.password_hash);
     if (!isValid) {
       logger.info('Login failed: invalid password', { userId: user.id });
-      return ApiErrors.unauthorized('이메일 또는 비밀번호가 올바르지 않습니다');
+      return ApiErrors.unauthorized(ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS);
     }
 
     // Generate token
@@ -114,7 +115,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const firstIssue = error.issues[0];
-      return ApiErrors.badRequest(firstIssue?.message ?? '유효성 검사 오류');
+      return ApiErrors.badRequest(
+        firstIssue?.message ?? ERROR_MESSAGES.VALIDATION.VALIDATION_ERROR
+      );
     }
 
     logger.error('Login error', error instanceof Error ? error : undefined, { ip: clientIp });
