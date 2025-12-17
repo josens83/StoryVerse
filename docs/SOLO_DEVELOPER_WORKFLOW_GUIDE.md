@@ -7212,7 +7212,1054 @@ const ResponsiveTable = ({ users }) => (
 
 ## 챕터 14: 상태별 UI 패턴 완벽 구현
 
-> 작성 예정
+### 14.1 AI가 만드는 "Happy Path Only" 문제
+
+AI에게 UI를 요청하면 **성공 케이스만 구현**하고 나머지 상태는 무시합니다. 실제 사용자 경험의 대부분은 "성공"이 아닌 **중간 상태**에서 발생합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              사용자가 실제로 경험하는 UI 상태들                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  사용자 여정 시나리오:                                           │
+│  ─────────────────────                                          │
+│                                                                 │
+│  1. 페이지 접속                                                  │
+│     └─→ 🔄 로딩 상태 (1-3초)     ← AI가 자주 누락!              │
+│                                                                 │
+│  2. 데이터 로드 완료                                             │
+│     ├─→ ✅ 성공: 데이터 표시     ← AI가 구현하는 부분            │
+│     ├─→ 📭 빈 상태: 데이터 없음  ← AI가 자주 누락!              │
+│     └─→ ❌ 에러: 로드 실패       ← AI가 자주 누락!              │
+│                                                                 │
+│  3. 사용자 액션 (저장, 삭제 등)                                  │
+│     ├─→ 🔄 처리 중              ← AI가 자주 누락!               │
+│     ├─→ ✅ 성공 피드백           ← AI가 자주 누락!              │
+│     └─→ ❌ 실패 피드백           ← AI가 자주 누락!              │
+│                                                                 │
+│  💡 AI는 ✅ 부분만 구현하고 나머지 80%를 무시함                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 14.2 4가지 핵심 상태 정의
+
+모든 데이터 표시 컴포넌트는 **최소 4가지 상태**를 가져야 합니다:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    UI의 4가지 핵심 상태                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 로딩 상태 (Loading)                                          │
+│  ──────────────────────                                         │
+│  • 데이터를 가져오는 중                                          │
+│  • Skeleton UI 또는 Spinner 표시                                │
+│  • 사용자에게 "작업 중"임을 알림                                 │
+│                                                                 │
+│  2. 성공 상태 (Success)                                          │
+│  ──────────────────────                                         │
+│  • 데이터가 정상적으로 로드됨                                    │
+│  • 실제 콘텐츠 표시                                              │
+│  • 대부분의 AI가 구현하는 부분                                   │
+│                                                                 │
+│  3. 빈 상태 (Empty)                                              │
+│  ──────────────────                                             │
+│  • 데이터가 없거나 검색 결과 없음                                │
+│  • 안내 메시지 + 다음 액션 제안                                  │
+│  • 사용자가 무엇을 해야 하는지 알려줌                            │
+│                                                                 │
+│  4. 에러 상태 (Error)                                            │
+│  ────────────────────                                           │
+│  • 데이터 로드 실패                                              │
+│  • 에러 메시지 + 재시도 옵션                                     │
+│  • 사용자가 다음에 무엇을 할 수 있는지 알려줌                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 14.3 로딩 상태: Skeleton UI 패턴
+
+**Skeleton UI**는 Spinner보다 더 나은 사용자 경험을 제공합니다. 실제 콘텐츠의 형태를 미리 보여주어 **체감 로딩 시간을 줄입니다.**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 기본 Skeleton 컴포넌트 (shadcn/ui 스타일)
+// ═══════════════════════════════════════════════════════════════
+
+import { cn } from '@/lib/utils';
+
+function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('animate-pulse rounded-md bg-muted', className)} {...props} />;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 카드 Skeleton
+// ═══════════════════════════════════════════════════════════════
+
+function CardSkeleton() {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        {/* 이미지 영역 */}
+        <Skeleton className="h-48 w-full rounded-lg" />
+
+        {/* 제목 */}
+        <Skeleton className="h-6 w-3/4 mt-4" />
+
+        {/* 설명 2줄 */}
+        <Skeleton className="h-4 w-full mt-3" />
+        <Skeleton className="h-4 w-2/3 mt-2" />
+
+        {/* 버튼 영역 */}
+        <div className="flex gap-2 mt-4">
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 리스트 아이템 Skeleton
+// ═══════════════════════════════════════════════════════════════
+
+function ListItemSkeleton() {
+  return (
+    <div className="flex items-center gap-4 p-4">
+      {/* 아바타 */}
+      <Skeleton className="h-12 w-12 rounded-full" />
+
+      <div className="flex-1 space-y-2">
+        {/* 이름 */}
+        <Skeleton className="h-4 w-1/3" />
+        {/* 설명 */}
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+
+      {/* 액션 버튼 */}
+      <Skeleton className="h-8 w-8 rounded-full" />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 테이블 Skeleton
+// ═══════════════════════════════════════════════════════════════
+
+function TableSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="w-full">
+      {/* 헤더 */}
+      <div className="flex gap-4 p-4 border-b">
+        <Skeleton className="h-4 w-1/4" />
+        <Skeleton className="h-4 w-1/4" />
+        <Skeleton className="h-4 w-1/4" />
+        <Skeleton className="h-4 w-1/4" />
+      </div>
+
+      {/* 행들 */}
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex gap-4 p-4 border-b">
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="h-4 w-1/4" />
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Skeleton vs Spinner 사용 기준:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Skeleton vs Spinner 선택 가이드                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Skeleton 사용 (권장):                                           │
+│  ─────────────────────                                          │
+│  • 콘텐츠 구조가 예측 가능할 때                                  │
+│  • 리스트, 카드, 프로필 등 정형화된 UI                           │
+│  • 초기 페이지 로딩                                              │
+│  • 로딩 시간이 1초 이상 예상될 때                                │
+│                                                                 │
+│  Spinner 사용:                                                   │
+│  ─────────────                                                  │
+│  • 버튼 내부 로딩 표시                                           │
+│  • 콘텐츠 구조를 모를 때                                         │
+│  • 오버레이 로딩 (모달, 전체 화면)                               │
+│  • 매우 짧은 작업 (< 1초)                                        │
+│                                                                 │
+│  💡 원칙: 가능하면 Skeleton, 불가능하면 Spinner                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 14.4 빈 상태 (Empty State) 패턴
+
+**빈 상태는 "2 parts instruction + 1 part delight" 공식**을 따릅니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                Empty State의 3요소                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────────────────────────┐                        │
+│  │         🎨 일러스트/아이콘           │  ← Delight            │
+│  │         (친근한 시각 요소)           │                        │
+│  ├─────────────────────────────────────┤                        │
+│  │                                     │                        │
+│  │  "아직 프로젝트가 없습니다"         │  ← Instruction 1       │
+│  │  (현재 상태 설명)                   │     (무슨 상황인지)    │
+│  │                                     │                        │
+│  │  "첫 번째 프로젝트를 만들어서       │  ← Instruction 2       │
+│  │   작업을 시작해보세요"              │     (무엇을 해야 하는지)│
+│  │                                     │                        │
+│  │  [ + 새 프로젝트 만들기 ]           │  ← CTA 버튼            │
+│  │                                     │                        │
+│  └─────────────────────────────────────┘                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**범용 Empty State 컴포넌트:**
+
+```tsx
+import { LucideIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface EmptyStateProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  secondaryAction,
+}: EmptyStateProps) {
+  return (
+    <div
+      className="
+      flex flex-col items-center justify-center
+      py-12 px-4
+      text-center
+    "
+    >
+      {/* 아이콘 */}
+      <div
+        className="
+        h-16 w-16
+        rounded-full
+        bg-muted
+        flex items-center justify-center
+        mb-4
+      "
+      >
+        <Icon className="h-8 w-8 text-muted-foreground" />
+      </div>
+
+      {/* 제목 */}
+      <h3 className="text-lg font-semibold">{title}</h3>
+
+      {/* 설명 */}
+      <p className="text-muted-foreground mt-1 max-w-sm">{description}</p>
+
+      {/* 액션 버튼들 */}
+      {(action || secondaryAction) && (
+        <div className="flex gap-3 mt-6">
+          {action && <Button onClick={action.onClick}>{action.label}</Button>}
+          {secondaryAction && (
+            <Button variant="outline" onClick={secondaryAction.onClick}>
+              {secondaryAction.label}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**상황별 Empty State 예시:**
+
+```tsx
+import {
+  Inbox,
+  Search,
+  FolderOpen,
+  Users,
+  FileText,
+  ShoppingCart
+} from 'lucide-react'
+
+// ═══════════════════════════════════════════════════════════════
+// 1. 첫 사용 - 데이터가 아예 없을 때
+// ═══════════════════════════════════════════════════════════════
+
+<EmptyState
+  icon={FolderOpen}
+  title="아직 프로젝트가 없습니다"
+  description="첫 번째 프로젝트를 만들어서 작업을 시작해보세요."
+  action={{
+    label: "새 프로젝트 만들기",
+    onClick: () => setShowCreateModal(true)
+  }}
+/>
+
+// ═══════════════════════════════════════════════════════════════
+// 2. 검색 결과 없음
+// ═══════════════════════════════════════════════════════════════
+
+<EmptyState
+  icon={Search}
+  title="검색 결과가 없습니다"
+  description={`"${searchQuery}"에 대한 결과를 찾을 수 없습니다. 다른 키워드로 검색해보세요.`}
+  action={{
+    label: "검색 초기화",
+    onClick: () => setSearchQuery('')
+  }}
+/>
+
+// ═══════════════════════════════════════════════════════════════
+// 3. 필터 결과 없음
+// ═══════════════════════════════════════════════════════════════
+
+<EmptyState
+  icon={FileText}
+  title="조건에 맞는 항목이 없습니다"
+  description="현재 필터 조건에 맞는 항목이 없습니다."
+  action={{
+    label: "필터 초기화",
+    onClick: () => resetFilters()
+  }}
+  secondaryAction={{
+    label: "새 항목 추가",
+    onClick: () => setShowCreateModal(true)
+  }}
+/>
+
+// ═══════════════════════════════════════════════════════════════
+// 4. 장바구니 비어있음
+// ═══════════════════════════════════════════════════════════════
+
+<EmptyState
+  icon={ShoppingCart}
+  title="장바구니가 비어있습니다"
+  description="마음에 드는 상품을 담아보세요."
+  action={{
+    label: "쇼핑 계속하기",
+    onClick: () => router.push('/products')
+  }}
+/>
+
+// ═══════════════════════════════════════════════════════════════
+// 5. 알림 없음
+// ═══════════════════════════════════════════════════════════════
+
+<EmptyState
+  icon={Inbox}
+  title="새로운 알림이 없습니다"
+  description="모든 알림을 확인했습니다."
+/>
+
+// ═══════════════════════════════════════════════════════════════
+// 6. 팀원 없음 (초대 유도)
+// ═══════════════════════════════════════════════════════════════
+
+<EmptyState
+  icon={Users}
+  title="아직 팀원이 없습니다"
+  description="팀원을 초대하여 함께 협업해보세요."
+  action={{
+    label: "팀원 초대하기",
+    onClick: () => setShowInviteModal(true)
+  }}
+/>
+```
+
+### 14.5 에러 상태 패턴
+
+**에러 상태는 사용자에게 3가지를 알려줘야 합니다:**
+
+1. 무슨 문제가 발생했는지
+2. 왜 발생했는지 (가능하다면)
+3. 어떻게 해결할 수 있는지
+
+```tsx
+import { AlertCircle, RefreshCw, Home, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+// ═══════════════════════════════════════════════════════════════
+// 범용 에러 상태 컴포넌트
+// ═══════════════════════════════════════════════════════════════
+
+interface ErrorStateProps {
+  title?: string;
+  message?: string;
+  onRetry?: () => void;
+  onGoBack?: () => void;
+  onGoHome?: () => void;
+}
+
+export function ErrorState({
+  title = '문제가 발생했습니다',
+  message = '데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+  onRetry,
+  onGoBack,
+  onGoHome,
+}: ErrorStateProps) {
+  return (
+    <div
+      className="
+      flex flex-col items-center justify-center
+      py-12 px-4
+      text-center
+    "
+    >
+      {/* 에러 아이콘 */}
+      <div
+        className="
+        h-16 w-16
+        rounded-full
+        bg-destructive/10
+        flex items-center justify-center
+        mb-4
+      "
+      >
+        <AlertCircle className="h-8 w-8 text-destructive" />
+      </div>
+
+      {/* 제목 */}
+      <h3 className="text-lg font-semibold">{title}</h3>
+
+      {/* 메시지 */}
+      <p className="text-muted-foreground mt-1 max-w-sm">{message}</p>
+
+      {/* 액션 버튼들 */}
+      <div className="flex flex-wrap gap-3 mt-6 justify-center">
+        {onRetry && (
+          <Button onClick={onRetry}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            다시 시도
+          </Button>
+        )}
+        {onGoBack && (
+          <Button variant="outline" onClick={onGoBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            뒤로 가기
+          </Button>
+        )}
+        {onGoHome && (
+          <Button variant="outline" onClick={onGoHome}>
+            <Home className="h-4 w-4 mr-2" />
+            홈으로
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 인라인 에러 (작은 영역용)
+// ═══════════════════════════════════════════════════════════════
+
+interface InlineErrorProps {
+  message: string;
+  onRetry?: () => void;
+}
+
+export function InlineError({ message, onRetry }: InlineErrorProps) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>오류</AlertTitle>
+      <AlertDescription className="flex items-center justify-between">
+        <span>{message}</span>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry} className="ml-4">
+            재시도
+          </Button>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
+```
+
+**에러 유형별 메시지 가이드:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 에러 유형별 사용자 친화적 메시지
+// ═══════════════════════════════════════════════════════════════
+
+const errorMessages = {
+  // 네트워크 에러
+  network: {
+    title: '연결할 수 없습니다',
+    message: '인터넷 연결을 확인하고 다시 시도해주세요.',
+  },
+
+  // 서버 에러 (500)
+  server: {
+    title: '서버에 문제가 발생했습니다',
+    message: '잠시 후 다시 시도해주세요. 문제가 계속되면 고객센터로 문의해주세요.',
+  },
+
+  // 인증 에러 (401)
+  unauthorized: {
+    title: '로그인이 필요합니다',
+    message: '이 페이지에 접근하려면 먼저 로그인해주세요.',
+  },
+
+  // 권한 에러 (403)
+  forbidden: {
+    title: '접근 권한이 없습니다',
+    message: '이 페이지에 접근할 권한이 없습니다.',
+  },
+
+  // 없는 페이지 (404)
+  notFound: {
+    title: '페이지를 찾을 수 없습니다',
+    message: '요청하신 페이지가 존재하지 않거나 이동되었습니다.',
+  },
+
+  // 타임아웃
+  timeout: {
+    title: '요청 시간이 초과되었습니다',
+    message: '서버 응답이 너무 오래 걸립니다. 나중에 다시 시도해주세요.',
+  },
+
+  // 유효성 검사 에러
+  validation: {
+    title: '입력 정보를 확인해주세요',
+    message: '일부 입력 항목이 올바르지 않습니다.',
+  },
+};
+
+// 사용 예시
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    if (error.message.includes('network')) {
+      return errorMessages.network;
+    }
+    if (error.message.includes('401')) {
+      return errorMessages.unauthorized;
+    }
+    // ... 기타 에러 타입 처리
+  }
+
+  return {
+    title: '문제가 발생했습니다',
+    message: '알 수 없는 오류가 발생했습니다. 다시 시도해주세요.',
+  };
+}
+```
+
+### 14.6 성공 피드백 패턴
+
+**사용자 액션 후에는 반드시 피드백**을 제공해야 합니다.
+
+```tsx
+import { useToast } from '@/components/ui/use-toast';
+import { Check, X, AlertTriangle, Info } from 'lucide-react';
+
+// ═══════════════════════════════════════════════════════════════
+// Toast 기반 피드백 시스템
+// ═══════════════════════════════════════════════════════════════
+
+export function useActionFeedback() {
+  const { toast } = useToast();
+
+  return {
+    // 성공 피드백
+    success: (message: string, description?: string) => {
+      toast({
+        title: message,
+        description,
+        className: 'bg-green-50 border-green-200',
+      });
+    },
+
+    // 에러 피드백
+    error: (message: string, description?: string) => {
+      toast({
+        variant: 'destructive',
+        title: message,
+        description,
+      });
+    },
+
+    // 경고 피드백
+    warning: (message: string, description?: string) => {
+      toast({
+        title: message,
+        description,
+        className: 'bg-yellow-50 border-yellow-200',
+      });
+    },
+
+    // 정보 피드백
+    info: (message: string, description?: string) => {
+      toast({
+        title: message,
+        description,
+      });
+    },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 사용 예시
+// ═══════════════════════════════════════════════════════════════
+
+function SaveButton() {
+  const feedback = useActionFeedback();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSave = async () => {
+    setIsLoading(true);
+
+    try {
+      await saveData();
+      feedback.success('저장 완료', '변경사항이 저장되었습니다.');
+    } catch (error) {
+      feedback.error('저장 실패', '다시 시도해주세요.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Button onClick={handleSave} disabled={isLoading}>
+      {isLoading ? (
+        <>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          저장 중...
+        </>
+      ) : (
+        '저장'
+      )}
+    </Button>
+  );
+}
+```
+
+**피드백 유형별 사용 가이드:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  피드백 유형 선택 가이드                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Toast (일시적, 자동 사라짐):                                    │
+│  ─────────────────────────────                                  │
+│  • 저장 성공                                                     │
+│  • 복사 완료                                                     │
+│  • 항목 삭제됨                                                   │
+│  • 설정 변경됨                                                   │
+│                                                                 │
+│  Inline Alert (지속적, 화면에 유지):                             │
+│  ─────────────────────────────────                              │
+│  • 폼 유효성 검사 에러                                           │
+│  • 중요한 경고 메시지                                            │
+│  • 필수 조치가 필요한 정보                                       │
+│                                                                 │
+│  Modal/Dialog (차단형, 확인 필요):                               │
+│  ─────────────────────────────────                              │
+│  • 삭제 확인                                                     │
+│  • 결제 완료                                                     │
+│  • 중요한 변경 확인                                              │
+│  • 세션 만료 알림                                                │
+│                                                                 │
+│  Page/Full Screen (전체 화면):                                   │
+│  ─────────────────────────────                                  │
+│  • 결제 성공 페이지                                              │
+│  • 회원가입 완료                                                 │
+│  • 중요 오류 (복구 불가)                                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 14.7 통합 상태 관리 패턴
+
+**모든 상태를 한 곳에서 관리하는 패턴:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 데이터 페칭 상태 타입
+// ═══════════════════════════════════════════════════════════════
+
+type DataState<T> =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: T }
+  | { status: 'error'; error: Error }
+  | { status: 'empty' };
+
+// ═══════════════════════════════════════════════════════════════
+// 범용 데이터 컨테이너 컴포넌트
+// ═══════════════════════════════════════════════════════════════
+
+interface DataContainerProps<T> {
+  state: DataState<T>;
+  onRetry?: () => void;
+
+  // 각 상태별 렌더링
+  renderLoading?: () => React.ReactNode;
+  renderEmpty?: () => React.ReactNode;
+  renderError?: (error: Error) => React.ReactNode;
+  renderSuccess: (data: T) => React.ReactNode;
+}
+
+export function DataContainer<T>({
+  state,
+  onRetry,
+  renderLoading,
+  renderEmpty,
+  renderError,
+  renderSuccess,
+}: DataContainerProps<T>) {
+  switch (state.status) {
+    case 'idle':
+    case 'loading':
+      return renderLoading?.() ?? <DefaultLoadingSkeleton />;
+
+    case 'empty':
+      return (
+        renderEmpty?.() ?? (
+          <EmptyState
+            icon={Inbox}
+            title="데이터가 없습니다"
+            description="표시할 내용이 없습니다."
+          />
+        )
+      );
+
+    case 'error':
+      return (
+        renderError?.(state.error) ?? <ErrorState message={state.error.message} onRetry={onRetry} />
+      );
+
+    case 'success':
+      return renderSuccess(state.data);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 사용 예시: 프로젝트 리스트
+// ═══════════════════════════════════════════════════════════════
+
+function ProjectList() {
+  const [state, setState] = useState<DataState<Project[]>>({ status: 'idle' });
+
+  const fetchProjects = async () => {
+    setState({ status: 'loading' });
+
+    try {
+      const data = await api.getProjects();
+
+      if (data.length === 0) {
+        setState({ status: 'empty' });
+      } else {
+        setState({ status: 'success', data });
+      }
+    } catch (error) {
+      setState({ status: 'error', error: error as Error });
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  return (
+    <DataContainer
+      state={state}
+      onRetry={fetchProjects}
+      renderLoading={() => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      )}
+      renderEmpty={() => (
+        <EmptyState
+          icon={FolderOpen}
+          title="프로젝트가 없습니다"
+          description="첫 번째 프로젝트를 만들어보세요."
+          action={{
+            label: '새 프로젝트',
+            onClick: () => setShowCreateModal(true),
+          }}
+        />
+      )}
+      renderSuccess={(projects) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </div>
+      )}
+    />
+  );
+}
+```
+
+### 14.8 React Query / SWR와 상태 통합
+
+**React Query 사용 시 상태 처리:**
+
+```tsx
+import { useQuery } from '@tanstack/react-query';
+
+function ProjectList() {
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => api.getProjects(),
+  });
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <CardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
+  // 에러 상태
+  if (isError) {
+    return <ErrorState message={error?.message} onRetry={() => refetch()} />;
+  }
+
+  // 빈 상태
+  if (!data || data.length === 0) {
+    return (
+      <EmptyState
+        icon={FolderOpen}
+        title="프로젝트가 없습니다"
+        description="첫 번째 프로젝트를 만들어보세요."
+        action={{
+          label: '새 프로젝트',
+          onClick: () => setShowCreateModal(true),
+        }}
+      />
+    );
+  }
+
+  // 성공 상태
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {data.map((project) => (
+        <ProjectCard key={project.id} project={project} />
+      ))}
+    </div>
+  );
+}
+```
+
+### 14.9 폼 상태 처리
+
+**폼은 특별히 더 많은 상태가 필요합니다:**
+
+```tsx
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const formSchema = z.object({
+  email: z.string().email('올바른 이메일을 입력해주세요'),
+  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
+});
+
+function LoginForm() {
+  const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'success' | 'error'>(
+    'idle'
+  );
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setSubmitState('submitting');
+    setSubmitError(null);
+
+    try {
+      await api.login(values);
+      setSubmitState('success');
+      // 리다이렉트 또는 성공 처리
+    } catch (error) {
+      setSubmitState('error');
+      setSubmitError(error instanceof Error ? error.message : '로그인에 실패했습니다');
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* 전체 폼 에러 메시지 */}
+        {submitState === 'error' && submitError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* 이메일 필드 */}
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>이메일</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="email@example.com"
+                  {...field}
+                  disabled={submitState === 'submitting'}
+                />
+              </FormControl>
+              <FormMessage /> {/* 필드별 에러 메시지 */}
+            </FormItem>
+          )}
+        />
+
+        {/* 비밀번호 필드 */}
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>비밀번호</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} disabled={submitState === 'submitting'} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* 제출 버튼 */}
+        <Button type="submit" className="w-full" disabled={submitState === 'submitting'}>
+          {submitState === 'submitting' ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              로그인 중...
+            </>
+          ) : (
+            '로그인'
+          )}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+### 14.10 AI에게 상태 구현 요청하는 프롬프트
+
+```markdown
+## 상태별 UI 요청 프롬프트 템플릿
+
+다음 컴포넌트를 만들어줘: [컴포넌트명]
+
+### 필수 구현 상태
+
+1. **로딩 상태**
+   - Skeleton UI 사용 (Spinner 아님)
+   - 실제 콘텐츠와 동일한 구조
+   - 적절한 애니메이션 (animate-pulse)
+
+2. **성공 상태**
+   - 실제 데이터 표시
+   - 적절한 레이아웃과 스타일링
+
+3. **빈 상태**
+   - 아이콘 + 제목 + 설명 + CTA 버튼
+   - 사용자가 다음에 무엇을 해야 하는지 안내
+
+4. **에러 상태**
+   - 에러 메시지 표시
+   - 재시도 버튼 포함
+   - 사용자 친화적 메시지 (기술적 용어 금지)
+
+### 추가 요구사항
+
+- TypeScript 타입 정의 포함
+- 각 상태는 별도 컴포넌트로 분리
+- 상태 전환 로직 포함
+- 접근성 고려 (aria-live for 상태 변경)
+
+### 참고할 컴포넌트
+
+- Skeleton: `@/components/ui/skeleton`
+- Button: `@/components/ui/button`
+- Alert: `@/components/ui/alert`
+```
+
+### 14.11 상태별 UI 체크리스트
+
+```
+□ 로딩 상태
+  - [ ] Skeleton UI 구현 (콘텐츠 구조와 일치)
+  - [ ] 적절한 로딩 표시 위치
+  - [ ] 과도하게 빠른 깜빡임 방지 (최소 표시 시간)
+
+□ 빈 상태
+  - [ ] 명확한 상태 설명
+  - [ ] 다음 액션 안내
+  - [ ] CTA 버튼 (해당되는 경우)
+  - [ ] 친근한 시각 요소 (아이콘/일러스트)
+
+□ 에러 상태
+  - [ ] 사용자 친화적 에러 메시지
+  - [ ] 재시도 옵션
+  - [ ] 대안 제시 (해당되는 경우)
+  - [ ] 기술적 세부사항 숨김
+
+□ 성공 피드백
+  - [ ] 모든 사용자 액션에 피드백
+  - [ ] 적절한 피드백 유형 선택 (Toast/Alert/Modal)
+  - [ ] 명확하고 간결한 메시지
+
+□ 폼 상태
+  - [ ] 필드별 유효성 검사 메시지
+  - [ ] 제출 중 로딩 표시
+  - [ ] 제출 버튼 비활성화 (처리 중)
+  - [ ] 전체 폼 에러 메시지 영역
+```
+
+### 14.12 다음 챕터 미리보기
+
+**챕터 15: UI/UX 품질 검증 자동화**에서는 Storybook, Chromatic, 시각적 회귀 테스트를 통해 UI 품질을 자동으로 검증하는 CI/CD 파이프라인을 구축하는 방법을 다룹니다.
 
 ---
 
