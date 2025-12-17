@@ -8265,7 +8265,1016 @@ function LoginForm() {
 
 ## 챕터 15: UI/UX 품질 검증 자동화
 
-> 작성 예정
+### 15.1 왜 UI 품질 검증을 자동화해야 하는가?
+
+바이브 코딩으로 빠르게 UI를 만들 수 있지만, **품질 검증 없이는 기술 부채가 쌓입니다.** 수동 검증은 시간이 오래 걸리고 일관성이 없습니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              수동 검증 vs 자동화 검증                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  수동 검증의 문제:                                               │
+│  ─────────────────                                              │
+│  • 매번 모든 페이지를 눈으로 확인? → 비현실적                    │
+│  • 반응형 테스트 (5+ 브레이크포인트)? → 시간 부족                │
+│  • 다크 모드 확인? → 자주 잊음                                   │
+│  • 이전 버전과 비교? → 불가능                                    │
+│  • 접근성 검사? → 전문 지식 필요                                 │
+│                                                                 │
+│  결과: 버그가 프로덕션에 배포됨 😱                               │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  자동화 검증의 장점:                                             │
+│  ─────────────────────                                          │
+│  • 모든 컴포넌트 자동 스크린샷                                   │
+│  • 이전 버전과 픽셀 단위 비교                                    │
+│  • 모든 브레이크포인트 자동 테스트                               │
+│  • 접근성 위반 자동 감지                                         │
+│  • PR마다 자동 실행                                              │
+│                                                                 │
+│  결과: 버그가 머지 전에 발견됨 ✅                                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 15.2 UI 품질 자동화 도구 체인
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  UI 품질 자동화 도구 체인                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Storybook                                                   │
+│     └─→ 컴포넌트 문서화 + 격리된 개발 환경                       │
+│                                                                 │
+│  2. Chromatic (또는 Percy, Playwright)                          │
+│     └─→ 시각적 회귀 테스트 (Visual Regression Testing)          │
+│                                                                 │
+│  3. axe-core + Playwright                                       │
+│     └─→ 접근성 자동 테스트                                       │
+│                                                                 │
+│  4. Lighthouse CI                                               │
+│     └─→ 성능 + 접근성 + SEO 점수 검사                           │
+│                                                                 │
+│  5. ESLint jsx-a11y                                             │
+│     └─→ 코드 작성 시점에 접근성 문제 감지                        │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  💰 비용 (솔로 개발자 기준):                                     │
+│                                                                 │
+│  도구             무료 티어              유료                    │
+│  ──────────────   ──────────────────    ──────────────         │
+│  Storybook        완전 무료              -                      │
+│  Chromatic        5,000 스냅샷/월       $149/월~                │
+│  Playwright       완전 무료              -                      │
+│  axe-core         완전 무료              -                      │
+│  Lighthouse CI    완전 무료              -                      │
+│                                                                 │
+│  💡 대부분 무료로 시작 가능!                                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 15.3 Storybook 설정하기
+
+**Storybook**은 컴포넌트를 격리된 환경에서 개발하고 문서화하는 도구입니다.
+
+**설치:**
+
+```bash
+# 자동 설정 (권장)
+npx storybook@latest init
+
+# 실행
+npm run storybook
+```
+
+**생성되는 구조:**
+
+```
+프로젝트/
+├── .storybook/
+│   ├── main.ts          # Storybook 설정
+│   └── preview.ts       # 전역 데코레이터, 스타일
+├── src/
+│   └── components/
+│       └── ui/
+│           ├── button.tsx
+│           └── button.stories.tsx  # 스토리 파일
+└── ...
+```
+
+**main.ts 설정 (Next.js + Tailwind):**
+
+```typescript
+// .storybook/main.ts
+import type { StorybookConfig } from '@storybook/nextjs';
+
+const config: StorybookConfig = {
+  stories: ['../src/**/*.stories.@(js|jsx|ts|tsx|mdx)'],
+  addons: [
+    '@storybook/addon-essentials',
+    '@storybook/addon-a11y', // 접근성 패널
+    '@storybook/addon-interactions', // 인터랙션 테스트
+  ],
+  framework: {
+    name: '@storybook/nextjs',
+    options: {},
+  },
+  staticDirs: ['../public'],
+};
+
+export default config;
+```
+
+**preview.ts 설정 (Tailwind CSS 적용):**
+
+```typescript
+// .storybook/preview.ts
+import type { Preview } from '@storybook/react';
+import '../src/app/globals.css'; // Tailwind CSS
+
+const preview: Preview = {
+  parameters: {
+    // 배경색 옵션
+    backgrounds: {
+      default: 'light',
+      values: [
+        { name: 'light', value: '#ffffff' },
+        { name: 'dark', value: '#1a1a1a' },
+      ],
+    },
+    // 반응형 뷰포트
+    viewport: {
+      viewports: {
+        mobile: { name: 'Mobile', styles: { width: '375px', height: '667px' } },
+        tablet: { name: 'Tablet', styles: { width: '768px', height: '1024px' } },
+        desktop: { name: 'Desktop', styles: { width: '1280px', height: '800px' } },
+      },
+    },
+  },
+};
+
+export default preview;
+```
+
+### 15.4 컴포넌트 스토리 작성하기
+
+**Button 컴포넌트 스토리 예시:**
+
+```tsx
+// src/components/ui/button.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { Button } from './button';
+import { Loader2, Mail, ArrowRight } from 'lucide-react';
+
+const meta: Meta<typeof Button> = {
+  title: 'UI/Button',
+  component: Button,
+  tags: ['autodocs'], // 자동 문서 생성
+  argTypes: {
+    variant: {
+      control: 'select',
+      options: ['default', 'destructive', 'outline', 'ghost', 'link'],
+    },
+    size: {
+      control: 'select',
+      options: ['default', 'sm', 'lg', 'icon'],
+    },
+  },
+};
+
+export default meta;
+type Story = StoryObj<typeof Button>;
+
+// ═══════════════════════════════════════════════════════════════
+// 기본 버튼
+// ═══════════════════════════════════════════════════════════════
+
+export const Default: Story = {
+  args: {
+    children: 'Button',
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 모든 변형 (Variants)
+// ═══════════════════════════════════════════════════════════════
+
+export const AllVariants: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-4">
+      <Button variant="default">Default</Button>
+      <Button variant="destructive">Destructive</Button>
+      <Button variant="outline">Outline</Button>
+      <Button variant="ghost">Ghost</Button>
+      <Button variant="link">Link</Button>
+    </div>
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 모든 크기 (Sizes)
+// ═══════════════════════════════════════════════════════════════
+
+export const AllSizes: Story = {
+  render: () => (
+    <div className="flex items-center gap-4">
+      <Button size="sm">Small</Button>
+      <Button size="default">Default</Button>
+      <Button size="lg">Large</Button>
+    </div>
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 아이콘 버튼
+// ═══════════════════════════════════════════════════════════════
+
+export const WithIcon: Story = {
+  render: () => (
+    <div className="flex gap-4">
+      <Button>
+        <Mail className="mr-2 h-4 w-4" />
+        Email
+      </Button>
+      <Button>
+        Next
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Button>
+    </div>
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 로딩 상태
+// ═══════════════════════════════════════════════════════════════
+
+export const Loading: Story = {
+  render: () => (
+    <Button disabled>
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      Loading...
+    </Button>
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 비활성화 상태
+// ═══════════════════════════════════════════════════════════════
+
+export const Disabled: Story = {
+  render: () => (
+    <div className="flex gap-4">
+      <Button disabled>Disabled</Button>
+      <Button variant="outline" disabled>
+        Disabled
+      </Button>
+    </div>
+  ),
+};
+```
+
+**Card 컴포넌트 스토리 예시 (상태별):**
+
+```tsx
+// src/components/ui/card.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './card';
+import { Button } from './button';
+import { Skeleton } from './skeleton';
+
+const meta: Meta<typeof Card> = {
+  title: 'UI/Card',
+  component: Card,
+  tags: ['autodocs'],
+};
+
+export default meta;
+type Story = StoryObj<typeof Card>;
+
+// ═══════════════════════════════════════════════════════════════
+// 기본 카드
+// ═══════════════════════════════════════════════════════════════
+
+export const Default: Story = {
+  render: () => (
+    <Card className="w-[350px]">
+      <CardHeader>
+        <CardTitle>카드 제목</CardTitle>
+        <CardDescription>카드 설명입니다.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p>카드 내용이 여기에 표시됩니다.</p>
+      </CardContent>
+    </Card>
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 로딩 상태
+// ═══════════════════════════════════════════════════════════════
+
+export const Loading: Story = {
+  render: () => (
+    <Card className="w-[350px]">
+      <CardHeader>
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-4 w-1/2 mt-2" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full mt-2" />
+        <Skeleton className="h-4 w-2/3 mt-2" />
+      </CardContent>
+    </Card>
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 인터랙티브 카드
+// ═══════════════════════════════════════════════════════════════
+
+export const Interactive: Story = {
+  render: () => (
+    <Card className="w-[350px]">
+      <CardHeader>
+        <CardTitle>프로젝트 설정</CardTitle>
+        <CardDescription>프로젝트 기본 정보를 설정합니다.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">프로젝트 이름</label>
+          <input className="w-full px-3 py-2 border rounded-md" placeholder="프로젝트 이름 입력" />
+        </div>
+        <Button className="w-full">저장</Button>
+      </CardContent>
+    </Card>
+  ),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 반응형 테스트
+// ═══════════════════════════════════════════════════════════════
+
+export const Responsive: Story = {
+  parameters: {
+    viewport: {
+      defaultViewport: 'mobile',
+    },
+  },
+  render: () => (
+    <Card className="w-full max-w-[350px]">
+      <CardHeader>
+        <CardTitle>반응형 카드</CardTitle>
+        <CardDescription>모바일에서 테스트하세요.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p>뷰포트 크기를 변경해보세요.</p>
+      </CardContent>
+    </Card>
+  ),
+};
+```
+
+### 15.5 Chromatic으로 시각적 회귀 테스트
+
+**Chromatic**은 Storybook 스토리를 자동으로 스크린샷하고 변경사항을 감지합니다.
+
+**설치 및 설정:**
+
+```bash
+# Chromatic 설치
+npm install --save-dev chromatic
+
+# 프로젝트 연결 (처음 한 번)
+npx chromatic --project-token=<your-project-token>
+```
+
+**GitHub Actions 통합:**
+
+```yaml
+# .github/workflows/chromatic.yml
+name: Chromatic
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 전체 히스토리 필요
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitZeroOnChanges: true # 변경 있어도 실패 안 함 (리뷰용)
+```
+
+**Chromatic 워크플로우:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  Chromatic 시각적 테스트 흐름                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. PR 생성                                                      │
+│     │                                                           │
+│     ▼                                                           │
+│  2. GitHub Actions 실행                                          │
+│     │                                                           │
+│     ▼                                                           │
+│  3. Chromatic이 모든 스토리 스크린샷                             │
+│     │                                                           │
+│     ▼                                                           │
+│  4. 이전 버전과 픽셀 비교                                        │
+│     │                                                           │
+│     ├─→ 변경 없음: ✅ 통과                                       │
+│     │                                                           │
+│     └─→ 변경 감지: 📸 리뷰 요청                                  │
+│         │                                                       │
+│         ▼                                                       │
+│  5. Chromatic UI에서 변경 확인                                   │
+│     │                                                           │
+│     ├─→ 의도한 변경: ✅ Accept                                   │
+│     │                                                           │
+│     └─→ 버그 발견: ❌ Deny → 수정 후 재푸시                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 15.6 Playwright로 시각적 테스트 (무료 대안)
+
+Chromatic 대신 **Playwright의 내장 스크린샷 비교** 기능을 사용할 수 있습니다.
+
+**설치:**
+
+```bash
+npm install --save-dev @playwright/test
+npx playwright install
+```
+
+**시각적 테스트 작성:**
+
+```typescript
+// tests/visual.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Visual Regression Tests', () => {
+  // ═══════════════════════════════════════════════════════════════
+  // 페이지 스크린샷 테스트
+  // ═══════════════════════════════════════════════════════════════
+
+  test('홈페이지 스크린샷', async ({ page }) => {
+    await page.goto('http://localhost:3000');
+
+    // 전체 페이지 스크린샷 비교
+    await expect(page).toHaveScreenshot('homepage.png', {
+      fullPage: true,
+      maxDiffPixels: 100, // 허용 오차
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 컴포넌트 스크린샷 테스트
+  // ═══════════════════════════════════════════════════════════════
+
+  test('로그인 폼 스크린샷', async ({ page }) => {
+    await page.goto('http://localhost:3000/login');
+
+    const loginForm = page.locator('[data-testid="login-form"]');
+    await expect(loginForm).toHaveScreenshot('login-form.png');
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 다크 모드 테스트
+  // ═══════════════════════════════════════════════════════════════
+
+  test('다크 모드 스크린샷', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('http://localhost:3000');
+
+    await expect(page).toHaveScreenshot('homepage-dark.png', {
+      fullPage: true,
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 반응형 테스트
+  // ═══════════════════════════════════════════════════════════════
+
+  test('모바일 뷰 스크린샷', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('http://localhost:3000');
+
+    await expect(page).toHaveScreenshot('homepage-mobile.png', {
+      fullPage: true,
+    });
+  });
+
+  test('태블릿 뷰 스크린샷', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto('http://localhost:3000');
+
+    await expect(page).toHaveScreenshot('homepage-tablet.png', {
+      fullPage: true,
+    });
+  });
+});
+```
+
+**playwright.config.ts:**
+
+```typescript
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+
+  // 스크린샷 설정
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixels: 100,
+      threshold: 0.2, // 20% 차이까지 허용
+    },
+  },
+
+  // 여러 브라우저에서 테스트
+  projects: [
+    {
+      name: 'chromium',
+      use: { browserName: 'chromium' },
+    },
+    {
+      name: 'firefox',
+      use: { browserName: 'firefox' },
+    },
+    {
+      name: 'webkit',
+      use: { browserName: 'webkit' },
+    },
+  ],
+
+  // 로컬 서버 자동 실행
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+  },
+});
+```
+
+**스크린샷 업데이트:**
+
+```bash
+# 기준 스크린샷 업데이트 (의도적 변경 시)
+npx playwright test --update-snapshots
+```
+
+### 15.7 접근성 자동 테스트 (axe-core)
+
+**Playwright + axe-core 설정:**
+
+```bash
+npm install --save-dev @axe-core/playwright
+```
+
+**접근성 테스트 작성:**
+
+```typescript
+// tests/accessibility.spec.ts
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test.describe('Accessibility Tests', () => {
+  test('홈페이지 접근성', async ({ page }) => {
+    await page.goto('http://localhost:3000');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+
+    // 위반 사항이 없어야 함
+    expect(results.violations).toEqual([]);
+  });
+
+  test('로그인 페이지 접근성', async ({ page }) => {
+    await page.goto('http://localhost:3000/login');
+
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 특정 영역만 테스트
+  // ═══════════════════════════════════════════════════════════════
+
+  test('네비게이션 접근성', async ({ page }) => {
+    await page.goto('http://localhost:3000');
+
+    const results = await new AxeBuilder({ page })
+      .include('nav') // nav 요소만 테스트
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 특정 규칙 제외 (예외 처리)
+  // ═══════════════════════════════════════════════════════════════
+
+  test('폼 접근성 (특정 규칙 제외)', async ({ page }) => {
+    await page.goto('http://localhost:3000/contact');
+
+    const results = await new AxeBuilder({ page })
+      .disableRules(['color-contrast']) // 색상 대비 규칙 제외 (임시)
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+});
+```
+
+**접근성 테스트 결과 리포트:**
+
+```typescript
+// tests/accessibility.spec.ts (향상된 버전)
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('접근성 검사 with 상세 리포트', async ({ page }) => {
+  await page.goto('http://localhost:3000');
+
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+
+  // 위반 사항 상세 출력
+  if (results.violations.length > 0) {
+    console.log('\n🚨 접근성 위반 사항:');
+
+    results.violations.forEach((violation) => {
+      console.log(`\n❌ ${violation.id}: ${violation.description}`);
+      console.log(`   영향: ${violation.impact}`);
+      console.log(`   도움말: ${violation.helpUrl}`);
+
+      violation.nodes.forEach((node) => {
+        console.log(`   요소: ${node.html}`);
+        console.log(`   수정 방법: ${node.failureSummary}`);
+      });
+    });
+  }
+
+  expect(results.violations).toEqual([]);
+});
+```
+
+### 15.8 Storybook 접근성 애드온
+
+**Storybook에서 실시간 접근성 검사:**
+
+```bash
+# 이미 설치됨 (@storybook/addon-a11y)
+```
+
+**스토리에서 접근성 테스트:**
+
+```tsx
+// button.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { Button } from './button';
+
+const meta: Meta<typeof Button> = {
+  title: 'UI/Button',
+  component: Button,
+  parameters: {
+    a11y: {
+      // axe 설정
+      config: {
+        rules: [
+          { id: 'color-contrast', enabled: true },
+          { id: 'button-name', enabled: true },
+        ],
+      },
+    },
+  },
+};
+
+export default meta;
+
+// 접근성 문제가 있는 예시 (경고 표시됨)
+export const AccessibilityIssue: StoryObj = {
+  render: () => (
+    // ❌ 아이콘만 있고 텍스트/aria-label 없음
+    <button className="p-2">
+      <svg>...</svg>
+    </button>
+  ),
+};
+
+// 올바른 예시
+export const AccessibilityCorrect: StoryObj = {
+  render: () => (
+    // ✅ aria-label 제공
+    <button className="p-2" aria-label="설정">
+      <svg>...</svg>
+    </button>
+  ),
+};
+```
+
+### 15.9 ESLint jsx-a11y 설정
+
+**코드 작성 시점에 접근성 문제 감지:**
+
+```bash
+npm install --save-dev eslint-plugin-jsx-a11y
+```
+
+**eslint.config.js:**
+
+```javascript
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+
+export default [
+  // 기존 설정...
+  jsxA11y.flatConfigs.recommended,
+  {
+    rules: {
+      // 이미지 alt 텍스트 필수
+      'jsx-a11y/alt-text': 'error',
+
+      // 클릭 가능한 요소에 키보드 지원
+      'jsx-a11y/click-events-have-key-events': 'error',
+
+      // 인터랙티브 요소에 role 필수
+      'jsx-a11y/no-static-element-interactions': 'error',
+
+      // label과 input 연결
+      'jsx-a11y/label-has-associated-control': [
+        'error',
+        {
+          assert: 'either',
+        },
+      ],
+
+      // 앵커 태그에 href 필수
+      'jsx-a11y/anchor-is-valid': 'error',
+
+      // 제목 순서 (h1 → h2 → h3)
+      'jsx-a11y/heading-has-content': 'error',
+    },
+  },
+];
+```
+
+### 15.10 Lighthouse CI 설정
+
+**Lighthouse CI**는 성능, 접근성, SEO 점수를 자동으로 측정합니다.
+
+```bash
+npm install --save-dev @lhci/cli
+```
+
+**lighthouserc.js:**
+
+```javascript
+module.exports = {
+  ci: {
+    collect: {
+      url: ['http://localhost:3000/', 'http://localhost:3000/login'],
+      startServerCommand: 'npm run start',
+      numberOfRuns: 3, // 3번 측정 후 평균
+    },
+    assert: {
+      assertions: {
+        // 성능 점수 80점 이상
+        'categories:performance': ['error', { minScore: 0.8 }],
+
+        // 접근성 점수 90점 이상
+        'categories:accessibility': ['error', { minScore: 0.9 }],
+
+        // SEO 점수 80점 이상
+        'categories:seo': ['error', { minScore: 0.8 }],
+
+        // 개별 메트릭
+        'first-contentful-paint': ['warn', { maxNumericValue: 2000 }],
+        'largest-contentful-paint': ['error', { maxNumericValue: 2500 }],
+        'cumulative-layout-shift': ['error', { maxNumericValue: 0.1 }],
+      },
+    },
+    upload: {
+      target: 'temporary-public-storage', // 무료 임시 저장소
+    },
+  },
+};
+```
+
+**GitHub Actions 통합:**
+
+```yaml
+# .github/workflows/lighthouse.yml
+name: Lighthouse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+```
+
+### 15.11 통합 CI/CD 파이프라인
+
+**모든 UI 품질 검사를 하나의 파이프라인으로:**
+
+```yaml
+# .github/workflows/ui-quality.yml
+name: UI Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # 린트 및 타입 체크
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint # ESLint + jsx-a11y
+      - run: npm run typecheck # TypeScript
+
+  # ─────────────────────────────────────────────────────────────
+  # Storybook 빌드
+  # ─────────────────────────────────────────────────────────────
+  storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build-storybook
+
+      - name: Upload Storybook
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook
+          path: storybook-static
+
+  # ─────────────────────────────────────────────────────────────
+  # 시각적 회귀 테스트 (Chromatic)
+  # ─────────────────────────────────────────────────────────────
+  visual:
+    needs: storybook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Run Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitZeroOnChanges: true
+
+  # ─────────────────────────────────────────────────────────────
+  # 접근성 테스트
+  # ─────────────────────────────────────────────────────────────
+  accessibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+
+      - name: Start server
+        run: npm run start &
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:3000
+
+      - name: Run accessibility tests
+        run: npx playwright test tests/accessibility.spec.ts
+
+  # ─────────────────────────────────────────────────────────────
+  # Lighthouse CI
+  # ─────────────────────────────────────────────────────────────
+  lighthouse:
+    needs: accessibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli
+          lhci autorun
+```
+
+### 15.12 UI 품질 자동화 체크리스트
+
+```
+□ Storybook 설정
+  - [ ] Storybook 설치 및 설정
+  - [ ] 주요 컴포넌트 스토리 작성
+  - [ ] 상태별 스토리 (로딩, 에러, 빈 상태)
+  - [ ] 접근성 애드온 활성화
+
+□ 시각적 테스트
+  - [ ] Chromatic 연동 또는 Playwright 스크린샷
+  - [ ] 주요 페이지 스크린샷 테스트
+  - [ ] 반응형 (모바일, 태블릿, 데스크톱)
+  - [ ] 다크 모드 테스트
+
+□ 접근성 테스트
+  - [ ] ESLint jsx-a11y 규칙 활성화
+  - [ ] Playwright + axe-core 테스트
+  - [ ] WCAG 2.1 AA 수준 검사
+
+□ 성능 테스트
+  - [ ] Lighthouse CI 설정
+  - [ ] 성능 점수 80점 이상
+  - [ ] 접근성 점수 90점 이상
+  - [ ] Core Web Vitals 기준 충족
+
+□ CI/CD 통합
+  - [ ] PR마다 자동 실행
+  - [ ] 실패 시 머지 차단
+  - [ ] 리포트 자동 생성
+```
+
+### 15.13 다음 챕터 미리보기
+
+**챕터 16: 마이크로 인터랙션과 애니메이션**에서는 버튼 클릭 피드백, 페이지 전환, 로딩 애니메이션 등 UI에 생동감을 부여하는 마이크로 인터랙션과 Framer Motion을 활용한 애니메이션 구현 방법을 다룹니다.
 
 ---
 
