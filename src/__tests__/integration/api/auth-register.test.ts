@@ -199,9 +199,9 @@ describe('POST /api/auth/register', () => {
 
       vi.mocked(supabase.from).mockImplementation((_table) => {
         if (callCount < 2) {
-          return mockSelectChain as ReturnType<typeof supabase.from>;
+          return mockSelectChain as unknown as ReturnType<typeof supabase.from>;
         }
-        return mockInsertChain as ReturnType<typeof supabase.from>;
+        return mockInsertChain as unknown as ReturnType<typeof supabase.from>;
       });
 
       vi.mocked(hashPassword).mockResolvedValue('hashed_password');
@@ -254,9 +254,9 @@ describe('POST /api/auth/register', () => {
 
       vi.mocked(supabase.from).mockImplementation(() => {
         if (callCount < 2) {
-          return mockSelectChain as ReturnType<typeof supabase.from>;
+          return mockSelectChain as unknown as ReturnType<typeof supabase.from>;
         }
-        return mockInsertChain as ReturnType<typeof supabase.from>;
+        return mockInsertChain as unknown as ReturnType<typeof supabase.from>;
       });
 
       vi.mocked(hashPassword).mockResolvedValue('hashed_password');

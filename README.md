@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StoryVerse
 
-## Getting Started
+**한국형 웹소설 플랫폼** - 독자와 작가 모두를 위한 프리미엄 웹소설 서비스
 
-First, run the development server:
+## 프로젝트 비전
+
+StoryVerse는 네이버 시리즈, 카카오페이지와 같은 웹소설 플랫폼입니다. 독자가 쉽게 웹소설을 탐색하고 읽을 수 있으며, 작가가 작품을 연재하고 수익을 창출할 수 있는 생태계를 제공합니다.
+
+### 핵심 가치
+
+1. **편의성** - 어디서든 쉽게 웹소설을 읽고 쓸 수 있는 플랫폼
+2. **공정성** - 작가에게 정당한 수익을 보장하는 투명한 시스템
+3. **커뮤니티** - 독자와 작가가 함께 성장하는 생태계
+
+> 자세한 비전은 [VISION.md](./docs/VISION.md)를 참조하세요.
+
+## 기술 스택
+
+| 카테고리         | 기술                                      |
+| ---------------- | ----------------------------------------- |
+| Framework        | Next.js 16 (App Router)                   |
+| Language         | TypeScript (strict mode)                  |
+| Database         | Supabase (PostgreSQL)                     |
+| State Management | Zustand, TanStack Query                   |
+| Styling          | Tailwind CSS                              |
+| Payment          | Stripe                                    |
+| Testing          | Vitest, React Testing Library, Playwright |
+| CI/CD            | GitHub Actions                            |
+
+## 시작하기
+
+### 요구사항
+
+- Node.js >= 18.0.0
+- npm
+
+### 설치
+
+```bash
+# 저장소 클론
+git clone https://github.com/josens83/StoryVerse.git
+cd StoryVerse
+
+# 의존성 설치
+npm install
+
+# 환경변수 설정
+cp .env.example .env.local
+# .env.local 파일을 편집하여 필요한 환경변수 설정
+```
+
+### 개발 서버 실행
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[http://localhost:3000](http://localhost:3000)에서 확인할 수 있습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 스크립트
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 명령어              | 설명                                 |
+| ------------------- | ------------------------------------ |
+| `npm run dev`       | 개발 서버 실행                       |
+| `npm run build`     | 프로덕션 빌드                        |
+| `npm run start`     | 프로덕션 서버 실행                   |
+| `npm run lint`      | ESLint 검사                          |
+| `npm run typecheck` | TypeScript 타입 검사                 |
+| `npm run test`      | 테스트 실행 (watch mode)             |
+| `npm run test:run`  | 테스트 실행 (single run)             |
+| `npm run verify`    | 전체 검증 (typecheck + lint + build) |
 
-## Learn More
+## 프로젝트 구조
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/              # Next.js App Router 페이지
+├── components/       # React 컴포넌트
+├── lib/              # 유틸리티 함수
+├── services/         # 비즈니스 로직
+├── store/            # Zustand 스토어
+├── hooks/            # 커스텀 훅
+├── types/            # TypeScript 타입
+└── __tests__/        # 테스트 파일
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 문서
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [프로젝트 비전](./docs/VISION.md)
+- [경쟁 분석](./docs/COMPETITIVE_ANALYSIS.md)
+- [아키텍처 결정 기록](./docs/adr/)
+- [개발 워크플로우 가이드](./docs/SOLO_DEVELOPER_WORKFLOW_GUIDE.md)
 
-## Deploy on Vercel
+## 기여하기
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'feat: Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.

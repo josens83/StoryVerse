@@ -31,7 +31,9 @@ describe('GET /api/novels/[id]', () => {
         error: { code: 'PGRST116', message: 'Not found' },
       }),
     };
-    vi.mocked(supabase.from).mockReturnValue(mockSelectChain as ReturnType<typeof supabase.from>);
+    vi.mocked(supabase.from).mockReturnValue(
+      mockSelectChain as unknown as ReturnType<typeof supabase.from>
+    );
 
     const request = createMockRequest('non-existent-id');
     const response = await GET(request, { params: Promise.resolve({ id: 'non-existent-id' }) });
@@ -99,9 +101,9 @@ describe('GET /api/novels/[id]', () => {
     vi.mocked(supabase.from).mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
-        return mockSelectChain as ReturnType<typeof supabase.from>;
+        return mockSelectChain as unknown as ReturnType<typeof supabase.from>;
       }
-      return mockUpdateChain as ReturnType<typeof supabase.from>;
+      return mockUpdateChain as unknown as ReturnType<typeof supabase.from>;
     });
 
     const request = createMockRequest('novel-123');
@@ -184,9 +186,9 @@ describe('GET /api/novels/[id]', () => {
     vi.mocked(supabase.from).mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
-        return mockSelectChain as ReturnType<typeof supabase.from>;
+        return mockSelectChain as unknown as ReturnType<typeof supabase.from>;
       }
-      return mockUpdateChain as ReturnType<typeof supabase.from>;
+      return mockUpdateChain as unknown as ReturnType<typeof supabase.from>;
     });
 
     const request = createMockRequest('novel-123');
@@ -205,7 +207,9 @@ describe('GET /api/novels/[id]', () => {
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockRejectedValue(new Error('Database connection failed')),
     };
-    vi.mocked(supabase.from).mockReturnValue(mockSelectChain as ReturnType<typeof supabase.from>);
+    vi.mocked(supabase.from).mockReturnValue(
+      mockSelectChain as unknown as ReturnType<typeof supabase.from>
+    );
 
     const request = createMockRequest('novel-123');
     const response = await GET(request, { params: Promise.resolve({ id: 'novel-123' }) });

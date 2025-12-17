@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # 의존성 설치 (다른 작업들이 재사용)
+  # ─────────────────────────────────────────────────────────────
+  install:
+    name: 📦 의존성 설치
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: 의존성 설치
+        run: npm ci
+
+      # node_modules를 아티팩트로 저장
+      - name: node_modules 캐시 저장
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────
+  # 타입 체크 (병렬)
+  # ─────────────────────────────────────────────────────────────
+  typecheck:
+    name: 🔍 타입 체크
+    needs: install
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: node_modules 복원
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - name: TypeScript 타입 체크
+        run: npm run typecheck
+
+  # ─────────────────────────────────────────────────────────────
+  # 린트 검사 (병렬)
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: 📋 린트 검사
+    needs: install
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: node_modules 복원
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - name: ESLint 검사
+        run: npm run lint
+
+  # ─────────────────────────────────────────────────────────────
+  # 테스트 실행 (병렬)
+  # ─────────────────────────────────────────────────────────────
+  test:
+    name: 🧪 테스트
+    needs: install
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: node_modules 복원
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - name: 단위/통합 테스트 실행
+        run: npm run test:run
+
+  # ─────────────────────────────────────────────────────────────
+  # 빌드 테스트 (typecheck, lint, test 모두 통과 후)
+  # ─────────────────────────────────────────────────────────────
+  build:
+    name: 🏗️ 빌드
+    needs: [typecheck, lint, test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: node_modules 복원
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - name: Next.js 빌드
+        run: npm run build
+
+      - name: 빌드 결과물 저장
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next
+          retention-days: 7

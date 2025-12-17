@@ -253,7 +253,7 @@ describe('POST /api/auth/login', () => {
       select: vi.fn().mockReturnThis(),
       eq: mockEq,
       single: mockSingle,
-    } as ReturnType<typeof supabase.from>);
+    } as unknown as ReturnType<typeof supabase.from>);
 
     const request = createMockRequest({
       email: 'TEST@EXAMPLE.COM', // Valid email with uppercase letters

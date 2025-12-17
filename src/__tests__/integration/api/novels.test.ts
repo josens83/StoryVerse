@@ -72,7 +72,9 @@ describe('GET /api/novels', () => {
           count: 1,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest();
       const response = await GET(request);
@@ -98,7 +100,9 @@ describe('GET /api/novels', () => {
           count: 50,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest({ page: '2', limit: '10' });
       const response = await GET(request);
@@ -143,7 +147,9 @@ describe('GET /api/novels', () => {
           count: 0,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest({ genre: 'fantasy' });
       await GET(request);
@@ -163,7 +169,9 @@ describe('GET /api/novels', () => {
           count: 0,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest({ status: 'completed' });
       await GET(request);
@@ -203,7 +211,9 @@ describe('GET /api/novels', () => {
           count: 0,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest();
       await GET(request);
@@ -226,7 +236,9 @@ describe('GET /api/novels', () => {
           count: 0,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest({ sort: 'popular' });
       await GET(request);
@@ -246,7 +258,9 @@ describe('GET /api/novels', () => {
           count: 0,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest({ sort: 'rating' });
       await GET(request);
@@ -277,7 +291,9 @@ describe('GET /api/novels', () => {
           count: 0,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest({ search: 'dragon' });
       await GET(request);
@@ -299,7 +315,9 @@ describe('GET /api/novels', () => {
           count: 0,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest({ search: '50%_off' });
       await GET(request);
@@ -358,7 +376,9 @@ describe('GET /api/novels', () => {
           count: 1,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest();
       const response = await GET(request);
@@ -396,7 +416,9 @@ describe('GET /api/novels', () => {
           count: null,
         }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as ReturnType<typeof supabase.from>);
+      vi.mocked(supabase.from).mockReturnValue(
+        mockQuery as unknown as ReturnType<typeof supabase.from>
+      );
 
       const request = createMockRequest();
       const response = await GET(request);
