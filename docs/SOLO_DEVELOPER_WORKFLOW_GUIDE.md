@@ -10377,7 +10377,1259 @@ function AnimatedComponent() {
 
 ## 챕터 17: 접근성(A11y) 완벽 가이드
 
-> 작성 예정
+### 17.1 접근성이 중요한 이유
+
+**접근성(Accessibility, A11y)**은 장애가 있는 사용자도 웹사이트를 사용할 수 있게 하는 것입니다. 하지만 접근성은 장애인만을 위한 것이 아닙니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              접근성이 도움이 되는 상황들                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  영구적 장애:                                                    │
+│  ─────────────                                                  │
+│  • 시각 장애 (전맹, 저시력, 색맹)                                │
+│  • 청각 장애                                                     │
+│  • 운동 장애 (마우스 사용 불가)                                  │
+│  • 인지 장애                                                     │
+│                                                                 │
+│  일시적 상황:                                                    │
+│  ─────────────                                                  │
+│  • 팔 부상으로 한 손만 사용 가능                                 │
+│  • 눈 수술 후 회복 중                                            │
+│  • 시끄러운 환경에서 소리 없이 사용                              │
+│                                                                 │
+│  상황적 제약:                                                    │
+│  ─────────────                                                  │
+│  • 밝은 햇빛 아래에서 화면 보기                                  │
+│  • 아기를 안고 한 손으로 폰 사용                                 │
+│  • 운전 중 음성으로만 사용                                       │
+│  • 느린 인터넷 환경                                              │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  💡 통계:                                                        │
+│  • 전 세계 인구의 15%가 어떤 형태의 장애를 가짐                  │
+│  • 웹페이지의 95.9%가 접근성 위반 포함 (WebAIM 2024)             │
+│  • 색맹 남성: 8%, 여성: 0.5%                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 17.2 WCAG 2.1 기준 이해하기
+
+**WCAG (Web Content Accessibility Guidelines)**는 웹 접근성의 국제 표준입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    WCAG 2.1 핵심 원칙                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  POUR 원칙:                                                      │
+│  ───────────                                                    │
+│                                                                 │
+│  1. Perceivable (인지 가능)                                      │
+│     ────────────────────────                                    │
+│     사용자가 콘텐츠를 인지할 수 있어야 함                        │
+│     • 이미지에 대체 텍스트                                       │
+│     • 비디오에 자막                                              │
+│     • 충분한 색상 대비                                           │
+│                                                                 │
+│  2. Operable (조작 가능)                                         │
+│     ────────────────────                                        │
+│     사용자가 인터페이스를 조작할 수 있어야 함                    │
+│     • 키보드로 모든 기능 사용 가능                               │
+│     • 충분한 시간 제공                                           │
+│     • 발작 유발 콘텐츠 금지                                      │
+│                                                                 │
+│  3. Understandable (이해 가능)                                   │
+│     ────────────────────────                                    │
+│     콘텐츠와 조작 방법을 이해할 수 있어야 함                     │
+│     • 명확한 언어 사용                                           │
+│     • 예측 가능한 동작                                           │
+│     • 입력 오류 방지 및 수정 지원                                │
+│                                                                 │
+│  4. Robust (견고함)                                              │
+│     ─────────────                                               │
+│     다양한 기술로 콘텐츠에 접근할 수 있어야 함                   │
+│     • 표준 HTML 사용                                             │
+│     • 보조 기술과 호환                                           │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  적합성 수준:                                                    │
+│  ─────────────                                                  │
+│  A   - 최소 요구사항 (필수)                                      │
+│  AA  - 권장 수준 (대부분의 법적 요구사항)     ← 목표 수준        │
+│  AAA - 최고 수준 (특수한 경우)                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 17.3 AI가 자주 놓치는 접근성 문제 10가지
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              AI 생성 코드의 흔한 접근성 문제                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 이미지 alt 텍스트 누락 또는 의미 없는 텍스트                  │
+│     ❌ <img src="hero.jpg" />                                    │
+│     ❌ <img src="hero.jpg" alt="image" />                        │
+│     ✅ <img src="hero.jpg" alt="팀원들이 회의하는 모습" />        │
+│                                                                 │
+│  2. 폼 요소에 label 누락                                         │
+│     ❌ <input placeholder="이메일" />                            │
+│     ✅ <label htmlFor="email">이메일</label>                     │
+│        <input id="email" />                                     │
+│                                                                 │
+│  3. 버튼에 접근 가능한 이름 없음                                  │
+│     ❌ <button><Icon /></button>                                 │
+│     ✅ <button aria-label="메뉴 열기"><Icon /></button>          │
+│                                                                 │
+│  4. 키보드 접근 불가능한 클릭 요소                                │
+│     ❌ <div onClick={...}>Click me</div>                         │
+│     ✅ <button onClick={...}>Click me</button>                   │
+│                                                                 │
+│  5. 색상만으로 정보 전달                                          │
+│     ❌ 빨간색 = 에러 (색맹 사용자는 구분 불가)                    │
+│     ✅ 빨간색 + 아이콘 + 텍스트로 에러 표시                       │
+│                                                                 │
+│  6. 불충분한 색상 대비                                            │
+│     ❌ 회색 텍스트 on 밝은 회색 배경 (대비 2:1)                   │
+│     ✅ 최소 4.5:1 대비 (일반 텍스트)                              │
+│                                                                 │
+│  7. 포커스 표시 제거                                              │
+│     ❌ outline: none; (포커스 보이지 않음)                        │
+│     ✅ focus-visible로 키보드 포커스만 표시                       │
+│                                                                 │
+│  8. 비시맨틱 HTML 사용                                            │
+│     ❌ <div class="button">...</div>                             │
+│     ✅ <button>...</button>                                      │
+│                                                                 │
+│  9. 동적 콘텐츠 변경 알림 없음                                    │
+│     ❌ 토스트가 나타나도 스크린 리더가 모름                       │
+│     ✅ role="alert" 또는 aria-live="polite"                      │
+│                                                                 │
+│  10. 제목 계층 구조 무시                                          │
+│     ❌ h1 → h3 → h2 (순서 뒤죽박죽)                              │
+│     ✅ h1 → h2 → h3 (순차적)                                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 17.4 시맨틱 HTML 기초
+
+**시맨틱 HTML**은 접근성의 기초입니다. 올바른 HTML 요소를 사용하면 별도의 ARIA 없이도 접근성이 확보됩니다.
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 페이지 구조
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 비시맨틱
+<div class="header">...</div>
+<div class="nav">...</div>
+<div class="main">...</div>
+<div class="footer">...</div>
+
+// ✅ 시맨틱
+<header>...</header>
+<nav>...</nav>
+<main>...</main>
+<footer>...</footer>
+
+// ═══════════════════════════════════════════════════════════════
+// 전체 페이지 구조 예시
+// ═══════════════════════════════════════════════════════════════
+
+export default function Layout({ children }) {
+  return (
+    <>
+      <a href="#main-content" className="sr-only focus:not-sr-only">
+        본문으로 건너뛰기
+      </a>
+
+      <header>
+        <nav aria-label="메인 네비게이션">
+          <ul>
+            <li><a href="/">홈</a></li>
+            <li><a href="/about">소개</a></li>
+            <li><a href="/contact">문의</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <main id="main-content">
+        {children}
+      </main>
+
+      <footer>
+        <nav aria-label="푸터 네비게이션">
+          ...
+        </nav>
+      </footer>
+    </>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 인터랙티브 요소
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 잘못된 사용
+<div onClick={handleClick}>클릭하세요</div>
+<span onClick={handleClick}>링크</span>
+<a onClick={handleClick}>제출</a>
+
+// ✅ 올바른 사용
+<button onClick={handleClick}>클릭하세요</button>
+<a href="/page">링크</a>
+<button type="submit">제출</button>
+
+// ═══════════════════════════════════════════════════════════════
+// 목록
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ div로 목록 흉내
+<div>
+  <div>항목 1</div>
+  <div>항목 2</div>
+</div>
+
+// ✅ 시맨틱 목록
+<ul>
+  <li>항목 1</li>
+  <li>항목 2</li>
+</ul>
+
+// 네비게이션 메뉴
+<nav>
+  <ul role="list">  {/* 일부 스크린 리더용 */}
+    <li><a href="/">홈</a></li>
+    <li><a href="/about">소개</a></li>
+  </ul>
+</nav>
+
+// ═══════════════════════════════════════════════════════════════
+// 제목 계층
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 잘못된 계층 (건너뛰기)
+<h1>페이지 제목</h1>
+<h3>섹션 제목</h3>  {/* h2를 건너뜀! */}
+<h2>다른 섹션</h2>
+
+// ✅ 올바른 계층
+<h1>페이지 제목</h1>
+<h2>섹션 제목</h2>
+<h3>하위 섹션</h3>
+<h2>다른 섹션</h2>
+
+// 💡 시각적 스타일은 CSS로, 계층은 HTML로
+<h2 className="text-sm">작은 글씨지만 h2</h2>
+```
+
+### 17.5 키보드 네비게이션
+
+**모든 기능은 키보드만으로 사용 가능해야 합니다.**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    키보드 네비게이션 기본                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  필수 키보드 지원:                                               │
+│  ─────────────────                                              │
+│                                                                 │
+│  Tab        다음 포커스 가능 요소로 이동                         │
+│  Shift+Tab  이전 포커스 가능 요소로 이동                         │
+│  Enter      버튼 클릭, 링크 이동                                 │
+│  Space      체크박스 토글, 버튼 클릭                             │
+│  Escape     모달/드롭다운 닫기                                   │
+│  Arrow      메뉴/탭/슬라이더 내 이동                             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  기본적으로 포커스 가능한 요소:                                   │
+│  ───────────────────────────────                                │
+│  • <a href="...">                                               │
+│  • <button>                                                     │
+│  • <input>, <select>, <textarea>                                │
+│  • <details>, <summary>                                         │
+│  • 요소에 tabindex="0" 추가된 경우                              │
+│                                                                 │
+│  ⚠️ tabindex 사용 주의:                                         │
+│  • tabindex="0": 자연스러운 순서에 포함                          │
+│  • tabindex="-1": 포커스 가능하지만 탭 순서에서 제외             │
+│  • tabindex="1+": 사용 금지! 순서가 꼬임                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**포커스 관리 패턴:**
+
+```tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+
+// ═══════════════════════════════════════════════════════════════
+// 포커스 트랩 (모달용)
+// ═══════════════════════════════════════════════════════════════
+
+function useFocusTrap(isActive: boolean) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isActive || !containerRef.current) return;
+
+    const container = containerRef.current;
+    const focusableElements = container.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+
+    const firstElement = focusableElements[0] as HTMLElement;
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+    // 첫 요소에 포커스
+    firstElement?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      if (e.shiftKey) {
+        // Shift+Tab: 첫 요소에서 마지막으로
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        }
+      } else {
+        // Tab: 마지막 요소에서 첫 번째로
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown);
+    return () => container.removeEventListener('keydown', handleKeyDown);
+  }, [isActive]);
+
+  return containerRef;
+}
+
+// 사용 예시
+function Modal({ isOpen, onClose, children }) {
+  const containerRef = useFocusTrap(isOpen);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h2 id="modal-title">모달 제목</h2>
+      {children}
+      <button onClick={onClose}>닫기</button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 포커스 복원 (모달 닫힐 때)
+// ═══════════════════════════════════════════════════════════════
+
+function useRestoreFocus(isOpen: boolean) {
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // 열릴 때 현재 포커스 저장
+      previousFocusRef.current = document.activeElement as HTMLElement;
+    } else if (previousFocusRef.current) {
+      // 닫힐 때 이전 포커스로 복원
+      previousFocusRef.current.focus();
+    }
+  }, [isOpen]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 커스텀 드롭다운 메뉴 키보드 지원
+// ═══════════════════════════════════════════════════════════════
+
+function Dropdown({ items, onSelect }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!isOpen) {
+          setIsOpen(true);
+          setActiveIndex(0);
+        } else {
+          setActiveIndex((prev) => (prev < items.length - 1 ? prev + 1 : prev));
+        }
+        break;
+
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        break;
+
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (isOpen && activeIndex >= 0) {
+          onSelect(items[activeIndex]);
+          setIsOpen(false);
+          buttonRef.current?.focus();
+        } else {
+          setIsOpen(true);
+        }
+        break;
+
+      case 'Escape':
+        setIsOpen(false);
+        buttonRef.current?.focus();
+        break;
+
+      case 'Home':
+        e.preventDefault();
+        setActiveIndex(0);
+        break;
+
+      case 'End':
+        e.preventDefault();
+        setActiveIndex(items.length - 1);
+        break;
+    }
+  };
+
+  return (
+    <div onKeyDown={handleKeyDown}>
+      <button
+        ref={buttonRef}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        선택하세요
+      </button>
+
+      {isOpen && (
+        <ul
+          ref={menuRef}
+          role="listbox"
+          aria-activedescendant={activeIndex >= 0 ? `option-${activeIndex}` : undefined}
+        >
+          {items.map((item, index) => (
+            <li
+              key={item.id}
+              id={`option-${index}`}
+              role="option"
+              aria-selected={index === activeIndex}
+              className={index === activeIndex ? 'bg-accent' : ''}
+              onClick={() => {
+                onSelect(item);
+                setIsOpen(false);
+              }}
+            >
+              {item.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+```
+
+### 17.6 포커스 표시 (Focus Visible)
+
+**포커스 표시를 제거하면 안 됩니다.** 대신 `focus-visible`을 사용합니다.
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 포커스 스타일 패턴
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 절대 하면 안 됨
+<button className="outline-none focus:outline-none">
+  포커스 표시 없음!
+</button>
+
+// ❌ 마우스 클릭에도 포커스 링 표시 (거슬림)
+<button className="focus:ring-2 focus:ring-primary">
+  항상 포커스 링
+</button>
+
+// ✅ 키보드 포커스만 표시 (권장)
+<button className="
+  focus:outline-none
+  focus-visible:ring-2
+  focus-visible:ring-primary
+  focus-visible:ring-offset-2
+">
+  키보드 포커스만 표시
+</button>
+
+// ═══════════════════════════════════════════════════════════════
+// 전역 포커스 스타일 (globals.css)
+// ═══════════════════════════════════════════════════════════════
+
+/*
+/* 기본 포커스 스타일 제거하고 focus-visible만 표시 */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* 또는 Tailwind 베이스 스타일에 추가 */
+@layer base {
+  *:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2 outline-none;
+  }
+}
+*/
+
+// ═══════════════════════════════════════════════════════════════
+// 컴포넌트별 포커스 스타일
+// ═══════════════════════════════════════════════════════════════
+
+// 버튼
+const buttonStyles = `
+  focus:outline-none
+  focus-visible:ring-2
+  focus-visible:ring-primary
+  focus-visible:ring-offset-2
+`
+
+// 입력 필드
+const inputStyles = `
+  focus:outline-none
+  focus:ring-2
+  focus:ring-primary
+  focus:border-primary
+`
+
+// 링크
+const linkStyles = `
+  focus:outline-none
+  focus-visible:underline
+  focus-visible:decoration-2
+`
+
+// 카드 (클릭 가능한 경우)
+const cardStyles = `
+  focus:outline-none
+  focus-visible:ring-2
+  focus-visible:ring-primary
+  focus-visible:ring-offset-2
+`
+```
+
+### 17.7 색상과 대비
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    색상 대비 요구사항                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  WCAG AA 기준 (필수):                                            │
+│  ─────────────────────                                          │
+│                                                                 │
+│  일반 텍스트 (< 18pt):     4.5:1 이상                            │
+│  큰 텍스트 (≥ 18pt 또는 14pt bold):  3:1 이상                    │
+│  UI 컴포넌트, 그래픽:      3:1 이상                              │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  예시 (흰색 배경 #FFFFFF 기준):                                  │
+│                                                                 │
+│  색상              대비     결과                                │
+│  ────────────────  ──────   ──────────────────                  │
+│  #000000 (검정)    21:1     ✅ 모든 텍스트 OK                    │
+│  #595959 (진회색)  7:1      ✅ 모든 텍스트 OK                    │
+│  #767676 (회색)    4.5:1    ✅ 일반 텍스트 OK                    │
+│  #949494 (연회색)  3:1      ⚠️ 큰 텍스트만 OK                    │
+│  #CCCCCC (밝은회색) 1.6:1    ❌ 사용 불가                        │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  💡 유용한 도구:                                                 │
+│  • WebAIM Contrast Checker                                      │
+│  • Chrome DevTools (Inspect → Contrast ratio)                   │
+│  • Figma Contrast plugin                                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**색상만으로 정보 전달하지 않기:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// ❌ 잘못된 예: 색상만으로 상태 표시
+// ═══════════════════════════════════════════════════════════════
+
+// 색맹 사용자는 빨강/초록 구분 불가
+<div className={status === 'error' ? 'text-red-500' : 'text-green-500'}>
+  {message}
+</div>
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ 올바른 예: 색상 + 아이콘 + 텍스트
+// ═══════════════════════════════════════════════════════════════
+
+import { AlertCircle, CheckCircle } from 'lucide-react'
+
+<div className={`flex items-center gap-2 ${
+  status === 'error' ? 'text-red-500' : 'text-green-500'
+}`}>
+  {status === 'error' ? (
+    <AlertCircle className="h-4 w-4" aria-hidden="true" />
+  ) : (
+    <CheckCircle className="h-4 w-4" aria-hidden="true" />
+  )}
+  <span>
+    {status === 'error' ? '오류: ' : '성공: '}
+    {message}
+  </span>
+</div>
+
+// ═══════════════════════════════════════════════════════════════
+// 폼 유효성 검사 피드백
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 테두리 색상만 변경
+<input className={error ? 'border-red-500' : 'border-gray-300'} />
+
+// ✅ 색상 + 아이콘 + 텍스트
+<div>
+  <div className="relative">
+    <input
+      className={`pr-10 ${error ? 'border-red-500' : 'border-gray-300'}`}
+      aria-invalid={!!error}
+      aria-describedby={error ? 'email-error' : undefined}
+    />
+    {error && (
+      <AlertCircle
+        className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-red-500"
+        aria-hidden="true"
+      />
+    )}
+  </div>
+  {error && (
+    <p id="email-error" className="text-red-500 text-sm mt-1 flex items-center gap-1">
+      <span className="sr-only">오류:</span>
+      {error}
+    </p>
+  )}
+</div>
+```
+
+### 17.8 이미지와 미디어 접근성
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 이미지 alt 텍스트 가이드
+// ═══════════════════════════════════════════════════════════════
+
+// 1. 정보 전달 이미지: 내용을 설명
+<img
+  src="/chart.png"
+  alt="2024년 매출 그래프: 1분기 100만원, 2분기 150만원, 3분기 200만원"
+/>
+
+// 2. 기능적 이미지 (버튼/링크 내): 기능 설명
+<button>
+  <img src="/search.svg" alt="검색" />
+</button>
+
+// 3. 장식적 이미지: 빈 alt 또는 aria-hidden
+<img src="/decorative-line.svg" alt="" />
+// 또는
+<img src="/decorative-line.svg" aria-hidden="true" />
+
+// 4. 복잡한 이미지 (차트, 다이어그램): 별도 설명 제공
+<figure>
+  <img
+    src="/complex-chart.png"
+    alt="분기별 매출 비교 차트"
+    aria-describedby="chart-description"
+  />
+  <figcaption id="chart-description">
+    2024년 분기별 매출을 보여주는 막대 그래프입니다.
+    1분기 100만원에서 시작하여 4분기 300만원으로 지속적인 성장을 보였습니다.
+    상세 데이터는 아래 표를 참조하세요.
+  </figcaption>
+</figure>
+
+// ═══════════════════════════════════════════════════════════════
+// 아이콘 접근성
+// ═══════════════════════════════════════════════════════════════
+
+// 의미 있는 아이콘 (단독 사용)
+<button aria-label="설정">
+  <Settings aria-hidden="true" />
+</button>
+
+// 텍스트와 함께 사용되는 아이콘
+<button>
+  <Mail aria-hidden="true" />
+  <span>이메일 보내기</span>
+</button>
+
+// 순수 장식용 아이콘
+<span aria-hidden="true">✨</span>
+
+// ═══════════════════════════════════════════════════════════════
+// 비디오/오디오 접근성
+// ═══════════════════════════════════════════════════════════════
+
+// 비디오에 자막 제공
+<video controls>
+  <source src="/video.mp4" type="video/mp4" />
+  <track
+    kind="captions"
+    src="/captions-ko.vtt"
+    srclang="ko"
+    label="한국어"
+    default
+  />
+  <track
+    kind="captions"
+    src="/captions-en.vtt"
+    srclang="en"
+    label="English"
+  />
+  이 브라우저는 비디오를 지원하지 않습니다.
+</video>
+
+// 오디오 콘텐츠에 대본 제공
+<div>
+  <audio controls src="/podcast.mp3">
+    이 브라우저는 오디오를 지원하지 않습니다.
+  </audio>
+  <details>
+    <summary>대본 보기</summary>
+    <p>안녕하세요. 오늘의 팟캐스트에 오신 것을 환영합니다...</p>
+  </details>
+</div>
+```
+
+### 17.9 폼 접근성
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 기본 폼 접근성 패턴
+// ═══════════════════════════════════════════════════════════════
+
+function AccessibleForm() {
+  return (
+    <form aria-labelledby="form-title">
+      <h2 id="form-title">회원가입</h2>
+
+      {/* 필수 필드 안내 */}
+      <p className="text-sm text-muted-foreground mb-4">
+        <span aria-hidden="true">*</span> 표시는 필수 항목입니다.
+      </p>
+
+      {/* 이메일 필드 */}
+      <div className="space-y-2">
+        <label htmlFor="email">
+          이메일
+          <span aria-hidden="true" className="text-red-500 ml-1">*</span>
+          <span className="sr-only">(필수)</span>
+        </label>
+        <input
+          id="email"
+          type="email"
+          required
+          aria-required="true"
+          aria-describedby="email-hint"
+          autoComplete="email"
+        />
+        <p id="email-hint" className="text-sm text-muted-foreground">
+          실제 사용하는 이메일을 입력해주세요.
+        </p>
+      </div>
+
+      {/* 비밀번호 필드 (에러 상태) */}
+      <div className="space-y-2">
+        <label htmlFor="password">
+          비밀번호
+          <span aria-hidden="true" className="text-red-500 ml-1">*</span>
+          <span className="sr-only">(필수)</span>
+        </label>
+        <input
+          id="password"
+          type="password"
+          required
+          aria-required="true"
+          aria-invalid="true"
+          aria-describedby="password-error password-requirements"
+          autoComplete="new-password"
+        />
+        <p id="password-error" className="text-red-500 text-sm" role="alert">
+          비밀번호는 8자 이상이어야 합니다.
+        </p>
+        <p id="password-requirements" className="text-sm text-muted-foreground">
+          영문, 숫자, 특수문자 조합 8자 이상
+        </p>
+      </div>
+
+      {/* 체크박스 그룹 */}
+      <fieldset>
+        <legend>알림 설정</legend>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="email-notifications" />
+            <label htmlFor="email-notifications">이메일 알림 받기</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="sms-notifications" />
+            <label htmlFor="sms-notifications">SMS 알림 받기</label>
+          </div>
+        </div>
+      </fieldset>
+
+      {/* 라디오 버튼 그룹 */}
+      <fieldset>
+        <legend>성별</legend>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input type="radio" id="male" name="gender" value="male" />
+            <label htmlFor="male">남성</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="radio" id="female" name="gender" value="female" />
+            <label htmlFor="female">여성</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="radio" id="other" name="gender" value="other" />
+            <label htmlFor="other">기타</label>
+          </div>
+        </div>
+      </fieldset>
+
+      {/* 제출 버튼 */}
+      <button type="submit">
+        가입하기
+      </button>
+    </form>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// autoComplete 속성 (자동 완성 지원)
+// ═══════════════════════════════════════════════════════════════
+
+// 개인 정보
+<input type="text" autoComplete="name" />           // 전체 이름
+<input type="text" autoComplete="given-name" />     // 이름
+<input type="text" autoComplete="family-name" />    // 성
+<input type="email" autoComplete="email" />         // 이메일
+<input type="tel" autoComplete="tel" />             // 전화번호
+
+// 주소
+<input type="text" autoComplete="street-address" /> // 상세 주소
+<input type="text" autoComplete="address-level1" /> // 시/도
+<input type="text" autoComplete="postal-code" />    // 우편번호
+<input type="text" autoComplete="country-name" />   // 국가
+
+// 로그인/결제
+<input type="text" autoComplete="username" />       // 사용자명
+<input type="password" autoComplete="current-password" /> // 현재 비밀번호
+<input type="password" autoComplete="new-password" />     // 새 비밀번호
+<input type="text" autoComplete="cc-name" />        // 카드 소유자명
+<input type="text" autoComplete="cc-number" />      // 카드 번호
+```
+
+### 17.10 ARIA 속성 가이드
+
+**ARIA (Accessible Rich Internet Applications)**는 HTML만으로 전달하기 어려운 접근성 정보를 제공합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 ARIA 사용 원칙                                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 네이티브 HTML을 먼저 사용                                    │
+│     ────────────────────────────                                │
+│     ARIA보다 시맨틱 HTML이 우선                                  │
+│                                                                 │
+│     ❌ <div role="button">클릭</div>                             │
+│     ✅ <button>클릭</button>                                     │
+│                                                                 │
+│  2. ARIA로 네이티브 의미 변경 금지                               │
+│     ─────────────────────────────                               │
+│     ❌ <button role="heading">제목</button>                      │
+│     ✅ <h2>제목</h2>                                             │
+│                                                                 │
+│  3. 인터랙티브 요소는 키보드 접근 필수                           │
+│     ─────────────────────────────────                           │
+│     ❌ <div role="button">클릭</div>  // 키보드 작동 안 함       │
+│     ✅ <div role="button" tabindex="0"                           │
+│           onKeyDown={e => e.key === 'Enter' && onClick()}>      │
+│                                                                 │
+│  4. 숨겨진 콘텐츠에는 aria-hidden                                │
+│     ────────────────────────────────                            │
+│     시각적으로 숨기고 스크린 리더에서도 숨길 때                  │
+│     ✅ <div aria-hidden="true">장식 요소</div>                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**자주 사용하는 ARIA 속성:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// aria-label / aria-labelledby
+// 요소에 접근 가능한 이름 제공
+// ═══════════════════════════════════════════════════════════════
+
+// aria-label: 직접 이름 제공
+<button aria-label="검색">
+  <SearchIcon />
+</button>
+
+// aria-labelledby: 다른 요소 참조
+<dialog aria-labelledby="dialog-title">
+  <h2 id="dialog-title">계정 삭제</h2>
+  <p>정말 삭제하시겠습니까?</p>
+</dialog>
+
+// ═══════════════════════════════════════════════════════════════
+// aria-describedby
+// 추가 설명 연결
+// ═══════════════════════════════════════════════════════════════
+
+<input
+  aria-describedby="password-hint password-error"
+/>
+<p id="password-hint">8자 이상</p>
+<p id="password-error">비밀번호가 너무 짧습니다</p>
+
+// ═══════════════════════════════════════════════════════════════
+// aria-expanded / aria-controls
+// 확장/축소 상태 전달
+// ═══════════════════════════════════════════════════════════════
+
+<button
+  aria-expanded={isOpen}
+  aria-controls="dropdown-menu"
+>
+  메뉴
+</button>
+<ul id="dropdown-menu" hidden={!isOpen}>
+  <li>항목 1</li>
+</ul>
+
+// ═══════════════════════════════════════════════════════════════
+// aria-live
+// 동적 콘텐츠 변경 알림
+// ═══════════════════════════════════════════════════════════════
+
+// polite: 현재 읽기 완료 후 알림
+<div aria-live="polite">
+  {message}  {/* 변경 시 스크린 리더가 읽음 */}
+</div>
+
+// assertive: 즉시 알림 (긴급한 경우만)
+<div aria-live="assertive" role="alert">
+  {errorMessage}
+</div>
+
+// ═══════════════════════════════════════════════════════════════
+// aria-current
+// 현재 상태 표시 (네비게이션 등)
+// ═══════════════════════════════════════════════════════════════
+
+<nav>
+  <a href="/" aria-current={isHome ? 'page' : undefined}>홈</a>
+  <a href="/about" aria-current={isAbout ? 'page' : undefined}>소개</a>
+</nav>
+
+// ═══════════════════════════════════════════════════════════════
+// aria-hidden
+// 스크린 리더에서 숨기기
+// ═══════════════════════════════════════════════════════════════
+
+// 장식적 요소
+<span aria-hidden="true">✨</span>
+
+// 텍스트와 중복되는 아이콘
+<button>
+  <MailIcon aria-hidden="true" />
+  이메일 보내기
+</button>
+
+// ═══════════════════════════════════════════════════════════════
+// role 속성 (주요 역할)
+// ═══════════════════════════════════════════════════════════════
+
+// 다이얼로그/모달
+<div role="dialog" aria-modal="true" aria-labelledby="title">
+  <h2 id="title">제목</h2>
+</div>
+
+// 알림
+<div role="alert">에러가 발생했습니다</div>
+
+// 상태 메시지 (덜 긴급)
+<div role="status">저장 완료</div>
+
+// 탭 인터페이스
+<div role="tablist">
+  <button role="tab" aria-selected="true">탭 1</button>
+  <button role="tab" aria-selected="false">탭 2</button>
+</div>
+<div role="tabpanel">탭 1 내용</div>
+```
+
+### 17.11 스크린 리더 전용 텍스트
+
+**시각적으로는 숨기지만 스크린 리더에서는 읽히는 텍스트:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// sr-only 클래스 (Tailwind CSS)
+// ═══════════════════════════════════════════════════════════════
+
+// Tailwind에 기본 포함된 sr-only
+<span className="sr-only">스크린 리더 전용 텍스트</span>
+
+// 수동 정의 (globals.css)
+/*
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+*/
+
+// ═══════════════════════════════════════════════════════════════
+// 사용 예시
+// ═══════════════════════════════════════════════════════════════
+
+// 1. 아이콘 버튼에 설명 추가
+<button>
+  <HeartIcon aria-hidden="true" />
+  <span className="sr-only">좋아요</span>
+</button>
+
+// 2. 테이블 열 헤더 보충
+<th>
+  <span className="sr-only">작업</span>
+</th>
+
+// 3. 현재 페이지 표시
+<a href="/about" aria-current="page">
+  소개
+  <span className="sr-only">(현재 페이지)</span>
+</a>
+
+// 4. 추가 컨텍스트 제공
+<button>
+  삭제
+  <span className="sr-only">: {itemName}</span>
+</button>
+
+// 5. 건너뛰기 링크 (평소에는 숨김, 포커스 시 표시)
+<a
+  href="#main-content"
+  className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-background p-2 z-50"
+>
+  본문으로 건너뛰기
+</a>
+```
+
+### 17.12 접근성 테스트 방법
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   접근성 테스트 체크리스트                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 자동화 도구 테스트                                           │
+│  ─────────────────────                                          │
+│  □ ESLint jsx-a11y                                              │
+│  □ axe DevTools (브라우저 확장)                                  │
+│  □ Lighthouse 접근성 점수                                        │
+│  □ WAVE (WebAIM)                                                │
+│                                                                 │
+│  2. 키보드 테스트                                                │
+│  ─────────────────                                              │
+│  □ Tab으로 모든 인터랙티브 요소 접근 가능                        │
+│  □ 포커스 순서가 논리적                                          │
+│  □ 포커스 표시가 보임                                            │
+│  □ Enter/Space로 버튼 작동                                       │
+│  □ Escape로 모달/드롭다운 닫힘                                   │
+│  □ 포커스 트랩이 모달에서 작동                                   │
+│                                                                 │
+│  3. 스크린 리더 테스트                                           │
+│  ─────────────────────                                          │
+│  □ VoiceOver (Mac/iOS): Cmd+F5                                  │
+│  □ NVDA (Windows): 무료                                         │
+│  □ 모든 콘텐츠가 읽힘                                            │
+│  □ 이미지 alt 텍스트가 적절                                      │
+│  □ 폼 레이블이 올바르게 연결                                     │
+│  □ 동적 변경 사항이 알림됨                                       │
+│                                                                 │
+│  4. 시각적 테스트                                                │
+│  ─────────────────                                              │
+│  □ 200% 확대에서도 사용 가능                                     │
+│  □ 색상 대비 4.5:1 이상                                          │
+│  □ 색상만으로 정보 전달하지 않음                                 │
+│  □ 텍스트 크기 조절 가능                                         │
+│                                                                 │
+│  5. 기타 테스트                                                  │
+│  ──────────────                                                 │
+│  □ 제목 계층 구조 확인                                           │
+│  □ 랜드마크 영역 존재                                            │
+│  □ 비디오에 자막 있음                                            │
+│  □ 애니메이션 비활성화 옵션                                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**브라우저 개발자 도구 활용:**
+
+```
+Chrome DevTools 접근성 검사:
+1. F12 → Elements 패널
+2. 요소 선택 후 Accessibility 탭 확인
+3. 또는 Lighthouse → Accessibility 검사
+
+axe DevTools 확장 설치:
+1. Chrome 웹 스토어에서 "axe DevTools" 설치
+2. DevTools → axe DevTools 탭
+3. "Scan ALL of my page" 클릭
+```
+
+### 17.13 AI에게 접근성 요청하는 프롬프트
+
+```markdown
+## 접근성 준수 컴포넌트 요청 프롬프트
+
+다음 컴포넌트를 WCAG 2.1 AA 기준에 맞게 구현해줘: [컴포넌트명]
+
+### 필수 접근성 요구사항
+
+**시맨틱 HTML:**
+
+- 적절한 HTML 요소 사용 (button, a, nav 등)
+- 제목 계층 구조 준수 (h1 → h2 → h3)
+
+**키보드 접근성:**
+
+- Tab으로 모든 요소 접근 가능
+- Enter/Space로 활성화
+- Escape로 닫기 (모달/드롭다운)
+- 포커스 트랩 (모달)
+- 포커스 복원
+
+**스크린 리더:**
+
+- 의미 있는 aria-label
+- aria-describedby로 추가 설명
+- aria-live로 동적 변경 알림
+- aria-expanded로 상태 전달
+
+**시각적:**
+
+- focus-visible 포커스 표시
+- 4.5:1 색상 대비
+- 색상 외 추가 표시 (아이콘, 텍스트)
+
+**폼 (해당 시):**
+
+- label과 input 연결
+- 에러 메시지 연결 (aria-describedby)
+- aria-invalid, aria-required
+- autoComplete 속성
+
+### 참고
+
+- sr-only 클래스로 스크린 리더 전용 텍스트
+- aria-hidden으로 장식 요소 숨김
+- role="alert"로 에러 알림
+```
+
+### 17.14 접근성 체크리스트
+
+```
+□ 시맨틱 HTML
+  - [ ] 적절한 HTML 요소 사용
+  - [ ] 제목 계층 구조 (h1 → h2 → h3)
+  - [ ] 랜드마크 요소 (header, nav, main, footer)
+  - [ ] 목록에 ul/ol 사용
+
+□ 키보드
+  - [ ] 모든 기능 키보드로 접근 가능
+  - [ ] 논리적인 탭 순서
+  - [ ] 포커스 표시 (focus-visible)
+  - [ ] 모달 포커스 트랩 및 복원
+  - [ ] 건너뛰기 링크
+
+□ 이미지/미디어
+  - [ ] 의미 있는 이미지에 alt 텍스트
+  - [ ] 장식 이미지에 alt="" 또는 aria-hidden
+  - [ ] 비디오에 자막
+  - [ ] 복잡한 이미지에 상세 설명
+
+□ 색상/시각
+  - [ ] 색상 대비 4.5:1 이상 (일반 텍스트)
+  - [ ] 색상만으로 정보 전달하지 않음
+  - [ ] 200% 확대에서도 사용 가능
+
+□ 폼
+  - [ ] 모든 입력에 label 연결
+  - [ ] 필수 필드 표시 (aria-required)
+  - [ ] 에러 메시지 연결 (aria-describedby)
+  - [ ] 에러 상태 표시 (aria-invalid)
+  - [ ] autoComplete 속성
+
+□ 동적 콘텐츠
+  - [ ] 변경 사항 알림 (aria-live)
+  - [ ] 로딩 상태 알림
+  - [ ] 에러 알림 (role="alert")
+
+□ ARIA
+  - [ ] 네이티브 HTML 우선 사용
+  - [ ] aria-label/aria-labelledby
+  - [ ] aria-expanded (확장/축소)
+  - [ ] aria-current (현재 페이지)
+```
+
+### 17.15 다음 챕터 미리보기
+
+**챕터 18: 성능과 UX의 교차점**에서는 Core Web Vitals(LCP, INP, CLS), 이미지 최적화, 로딩 UX 전략, 프리페칭 등 웹 성능이 사용자 경험에 미치는 영향과 최적화 방법을 다룹니다.
 
 ---
 
