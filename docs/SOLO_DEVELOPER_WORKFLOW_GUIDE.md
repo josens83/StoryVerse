@@ -5119,7 +5119,1286 @@ AI가 생성한 UI를 수락하기 전에 **반드시 확인**해야 할 항목�
 
 ## 챕터 12: AI에게 디자인 시스템 전달하기
 
-> 작성 예정
+> "AI가 내 디자인 시스템을 무시합니다" - 가장 흔한 불만
+> 그건 AI의 문제가 아니라, 컨텍스트 전달의 문제입니다.
+
+### 12.1 AI가 디자인 시스템을 무시하는 이유
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    AI의 디자인 결정 과정                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  사용자 요청: "로그인 폼 만들어줘"                              │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────────────────────────────┐                   │
+│  │  AI가 참조하는 컨텍스트                 │                   │
+│  │  ─────────────────────                   │                   │
+│  │  1. 현재 열린 파일 (있다면)             │                   │
+│  │  2. 대화 히스토리                        │                   │
+│  │  3. 일반적인 패턴 (학습 데이터)         │                   │
+│  │                                          │                   │
+│  │  ❌ 참조하지 않는 것:                    │                   │
+│  │  - 당신의 디자인 시스템                  │                   │
+│  │  - 프로젝트의 컬러 팔레트               │                   │
+│  │  - 기존 컴포넌트 라이브러리             │                   │
+│  │  - Tailwind 커스텀 설정                  │                   │
+│  └─────────────────────────────────────────┘                   │
+│       │                                                         │
+│       ▼                                                         │
+│  결과: 일반적인 스타일의 "작동하는" 코드                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**핵심 문제: AI는 당신의 프로젝트 컨텍스트를 모른다**
+
+### 12.2 컨텍스트 전달의 3가지 레벨
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   컨텍스트 전달 방법 비교                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  레벨 1: MCP 서버 (가장 강력)                                   │
+│  ═══════════════════════════                                    │
+│  ✅ 실시간 컨텍스트 제공                                        │
+│  ✅ 파일 시스템 접근                                            │
+│  ✅ 도구 통합 가능                                              │
+│  ⚠️ 설정 복잡도 높음                                            │
+│                                                                 │
+│  레벨 2: Rules 파일 (.cursorrules, CLAUDE.md)                   │
+│  ═══════════════════════════════════════════                    │
+│  ✅ 자동으로 매 대화에 포함                                     │
+│  ✅ 프로젝트별 커스터마이징                                     │
+│  ✅ 버전 관리 가능                                              │
+│  ⚠️ 토큰 제한 존재                                              │
+│                                                                 │
+│  레벨 3: 직접 프롬프트                                          │
+│  ═══════════════════                                            │
+│  ✅ 즉시 적용 가능                                              │
+│  ✅ 유연한 조정                                                 │
+│  ⚠️ 매번 반복 필요                                              │
+│  ⚠️ 일관성 유지 어려움                                          │
+│                                                                 │
+│  ─────────────────────────────────────────                      │
+│  추천: 레벨 2 기반 + 레벨 1 점진적 도입                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 12.3 MCP 서버 활용하기
+
+#### 12.3.1 MCP(Model Context Protocol)란?
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      MCP 아키텍처                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐     ┌──────────────┐     ┌────────────────┐   │
+│  │   AI IDE    │────▶│  MCP 서버    │────▶│  프로젝트 자원  │   │
+│  │  (Cursor,   │     │              │     │  - 파일        │   │
+│  │   Claude)   │◀────│  프로토콜     │◀────│  - DB          │   │
+│  └─────────────┘     └──────────────┘     │  - API         │   │
+│                                           └────────────────┘   │
+│                                                                 │
+│  MCP가 제공하는 것:                                             │
+│  ─────────────────                                              │
+│  1. Tools: AI가 호출할 수 있는 함수                            │
+│  2. Resources: AI가 읽을 수 있는 데이터                        │
+│  3. Prompts: 미리 정의된 프롬프트 템플릿                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### 12.3.2 디자인 시스템용 MCP 서버 예시
+
+```typescript
+// mcp-design-system/src/index.ts
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+const server = new McpServer({
+  name: 'design-system',
+  version: '1.0.0',
+});
+
+// 디자인 토큰 읽기 도구
+server.tool(
+  'get-design-tokens',
+  'Get the project design tokens (colors, spacing, typography)',
+  {},
+  async () => {
+    const tokensPath = path.join(process.cwd(), 'src/styles/tokens.css');
+    try {
+      const content = await fs.readFile(tokensPath, 'utf-8');
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Design Tokens:\n\n${content}`,
+          },
+        ],
+      };
+    } catch {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: 'Design tokens file not found',
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+);
+
+// 컴포넌트 목록 조회 도구
+server.tool(
+  'list-components',
+  'List all available UI components with their props',
+  {
+    category: z.string().optional().describe('Filter by category (ui, layout, form)'),
+  },
+  async ({ category }) => {
+    const componentsDir = path.join(process.cwd(), 'src/components');
+    const categories = category ? [category] : ['ui', 'layout', 'form'];
+
+    const components: string[] = [];
+
+    for (const cat of categories) {
+      const catPath = path.join(componentsDir, cat);
+      try {
+        const files = await fs.readdir(catPath);
+        const tsxFiles = files.filter((f) => f.endsWith('.tsx'));
+        components.push(`\n## ${cat}/\n${tsxFiles.map((f) => `- ${f}`).join('\n')}`);
+      } catch {
+        // Category doesn't exist
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Available Components:${components.join('\n')}`,
+        },
+      ],
+    };
+  }
+);
+
+// 컴포넌트 사용법 조회 도구
+server.tool(
+  'get-component-usage',
+  'Get usage example and props for a specific component',
+  {
+    name: z.string().describe('Component name (e.g., Button, Card)'),
+  },
+  async ({ name }) => {
+    // 컴포넌트 파일 찾기
+    const possiblePaths = [
+      `src/components/ui/${name}.tsx`,
+      `src/components/ui/${name.toLowerCase()}.tsx`,
+      `src/components/layout/${name}.tsx`,
+      `src/components/form/${name}.tsx`,
+    ];
+
+    for (const p of possiblePaths) {
+      try {
+        const content = await fs.readFile(path.join(process.cwd(), p), 'utf-8');
+
+        // Props 인터페이스 추출
+        const propsMatch = content.match(/interface \w+Props[^{]*\{[\s\S]*?\}/);
+        const props = propsMatch ? propsMatch[0] : 'Props not found';
+
+        // JSDoc 추출
+        const jsdocMatch = content.match(/\/\*\*[\s\S]*?\*\//);
+        const jsdoc = jsdocMatch ? jsdocMatch[0] : '';
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `# ${name} Component\n\nPath: ${p}\n\n## Documentation\n${jsdoc}\n\n## Props\n\`\`\`typescript\n${props}\n\`\`\``,
+            },
+          ],
+        };
+      } catch {
+        // File doesn't exist, try next path
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Component "${name}" not found`,
+        },
+      ],
+      isError: true,
+    };
+  }
+);
+
+// 서버 시작
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+main().catch(console.error);
+```
+
+#### 12.3.3 MCP 서버 설정 (Claude Code)
+
+```json
+// .mcp.json (프로젝트 루트)
+{
+  "mcpServers": {
+    "design-system": {
+      "command": "npx",
+      "args": ["tsx", "mcp-design-system/src/index.ts"],
+      "env": {
+        "PROJECT_ROOT": "${workspaceFolder}"
+      }
+    }
+  }
+}
+```
+
+#### 12.3.4 shadcn/ui 전용 MCP 서버
+
+```typescript
+// mcp-shadcn/src/index.ts
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+const server = new McpServer({
+  name: 'shadcn-ui',
+  version: '1.0.0',
+});
+
+// shadcn/ui 컴포넌트 설정 확인
+server.tool('get-shadcn-config', 'Get shadcn/ui configuration for this project', {}, async () => {
+  try {
+    const configPath = path.join(process.cwd(), 'components.json');
+    const config = await fs.readFile(configPath, 'utf-8');
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `shadcn/ui Configuration:\n\n\`\`\`json\n${config}\n\`\`\``,
+        },
+      ],
+    };
+  } catch {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: 'shadcn/ui not configured in this project',
+        },
+      ],
+      isError: true,
+    };
+  }
+});
+
+// 설치된 shadcn 컴포넌트 목록
+server.tool('list-shadcn-components', 'List all installed shadcn/ui components', {}, async () => {
+  try {
+    const uiDir = path.join(process.cwd(), 'src/components/ui');
+    const files = await fs.readdir(uiDir);
+    const components = files.filter((f) => f.endsWith('.tsx')).map((f) => f.replace('.tsx', ''));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Installed shadcn/ui components:\n\n${components.map((c) => `- ${c}`).join('\n')}\n\nTo use: import { ComponentName } from "@/components/ui/component-name"`,
+        },
+      ],
+    };
+  } catch {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: 'No shadcn/ui components directory found',
+        },
+      ],
+      isError: true,
+    };
+  }
+});
+
+// 컴포넌트 변형 조회
+server.tool(
+  'get-component-variants',
+  'Get all variants for a shadcn/ui component',
+  {
+    component: z.string().describe('Component name (e.g., button, badge)'),
+  },
+  async ({ component }) => {
+    try {
+      const filePath = path.join(process.cwd(), `src/components/ui/${component}.tsx`);
+      const content = await fs.readFile(filePath, 'utf-8');
+
+      // cva variants 추출
+      const cvaMatch = content.match(
+        /cva\([^)]+,\s*\{[\s\S]*?variants:\s*\{([\s\S]*?)\}\s*,?\s*defaultVariants/
+      );
+
+      if (cvaMatch) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Variants for ${component}:\n\n\`\`\`typescript\nvariants: {${cvaMatch[1]}}\n\`\`\``,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `No variants found for ${component}`,
+          },
+        ],
+      };
+    } catch {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Component "${component}" not found`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+);
+
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+main().catch(console.error);
+```
+
+### 12.4 .cursorrules 완벽 가이드
+
+#### 12.4.1 효과적인 .cursorrules 구조
+
+````markdown
+<!-- .cursorrules -->
+
+# Project: StoryVerse
+
+## Tech Stack
+
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript (strict mode)
+- UI: shadcn/ui + Tailwind CSS v4
+- State: Zustand + TanStack Query
+
+## Design System
+
+### Colors (use CSS variables)
+
+- Primary: `var(--primary)` - Brand blue
+- Secondary: `var(--secondary)` - Supporting gray
+- Destructive: `var(--destructive)` - Error red
+- Muted: `var(--muted)` - Disabled/placeholder
+
+### Spacing Scale
+
+- xs: 0.25rem (4px)
+- sm: 0.5rem (8px)
+- md: 1rem (16px)
+- lg: 1.5rem (24px)
+- xl: 2rem (32px)
+
+### Typography
+
+- Heading: font-bold text-foreground
+- Body: text-base text-foreground
+- Caption: text-sm text-muted-foreground
+
+## Component Usage Rules
+
+### Always use existing components:
+
+- Button: `import { Button } from "@/components/ui/button"`
+  - Variants: default, destructive, outline, secondary, ghost, link
+  - Sizes: default, sm, lg, icon
+
+- Card: `import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"`
+
+- Input: `import { Input } from "@/components/ui/input"`
+  - Always wrap with Label for accessibility
+
+- Form: Use react-hook-form + zod for all forms
+  ```tsx
+  import { useForm } from 'react-hook-form';
+  import { zodResolver } from '@hookform/resolvers/zod';
+  ```
+````
+
+### Never do:
+
+- ❌ Inline styles
+- ❌ Custom color values (use CSS variables)
+- ❌ Direct DOM manipulation
+- ❌ Creating new components without checking existing ones first
+
+## File Patterns
+
+### Component files:
+
+```tsx
+// src/components/[category]/ComponentName.tsx
+'use client' // Only if needed
+
+interface ComponentNameProps {
+  // Props definition
+}
+
+export function ComponentName({ ...props }: ComponentNameProps) {
+  return (/* JSX */)
+}
+```
+
+### API Routes:
+
+```tsx
+// src/app/api/[route]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { apiSuccess, apiError } from '@/lib/api-response';
+
+export async function GET(request: NextRequest) {
+  try {
+    // Implementation
+    return apiSuccess(data);
+  } catch (error) {
+    return apiError('Error message', 500);
+  }
+}
+```
+
+## Common Patterns
+
+### Loading States:
+
+```tsx
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Use skeletons that match the content shape
+<Skeleton className="h-4 w-[200px]" />;
+```
+
+### Error States:
+
+```tsx
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+
+<Alert variant="destructive">
+  <AlertCircle className="h-4 w-4" />
+  <AlertDescription>{error.message}</AlertDescription>
+</Alert>;
+```
+
+### Empty States:
+
+```tsx
+<div className="flex flex-col items-center justify-center p-8 text-center">
+  <IconComponent className="h-12 w-12 text-muted-foreground mb-4" />
+  <h3 className="font-semibold">No items found</h3>
+  <p className="text-sm text-muted-foreground">Description of what to do next</p>
+</div>
+```
+
+````
+
+#### 12.4.2 상황별 .cursorrules 섹션
+
+```markdown
+<!-- 폼 집중 프로젝트용 추가 섹션 -->
+
+## Form Patterns
+
+### Standard Form Structure:
+```tsx
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+
+const formSchema = z.object({
+  email: z.string().email("유효한 이메일을 입력하세요"),
+  password: z.string().min(8, "비밀번호는 8자 이상이어야 합니다"),
+})
+
+export function LoginForm() {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { email: "", password: "" },
+  })
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Handle submission
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>이메일</FormLabel>
+              <FormControl>
+                <Input placeholder="email@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {/* More fields */}
+        <Button type="submit" className="w-full">
+          로그인
+        </Button>
+      </form>
+    </Form>
+  )
+}
+````
+
+### Form Validation Messages (Korean):
+
+- Required: "필수 항목입니다"
+- Email: "유효한 이메일을 입력하세요"
+- Min length: "{n}자 이상 입력하세요"
+- Max length: "{n}자 이하로 입력하세요"
+- Pattern: "올바른 형식으로 입력하세요"
+
+````
+
+### 12.5 CLAUDE.md 디자인 시스템 섹션
+
+```markdown
+<!-- CLAUDE.md에 추가할 디자인 시스템 섹션 -->
+
+## 디자인 시스템
+
+### UI 컴포넌트 사용 규칙
+
+이 프로젝트는 shadcn/ui를 사용합니다. 새로운 UI를 만들 때:
+
+1. **먼저 기존 컴포넌트 확인**: `src/components/ui/` 디렉토리
+2. **shadcn/ui 공식 문서 참조**: https://ui.shadcn.com
+3. **커스텀 컴포넌트는 최후의 수단**
+
+### 설치된 컴포넌트 목록
+- Button (variants: default, destructive, outline, secondary, ghost, link)
+- Card (CardHeader, CardTitle, CardDescription, CardContent, CardFooter)
+- Input, Textarea, Select, Checkbox, Radio
+- Dialog, AlertDialog, Sheet, Drawer
+- Tabs, Accordion
+- Badge, Avatar
+- Skeleton, Spinner
+- Toast (sonner)
+
+### 스타일링 규칙
+
+```tsx
+// ✅ 올바른 방법
+<div className="flex items-center gap-4 p-4">
+  <Button variant="outline" size="sm">
+    Click me
+  </Button>
+</div>
+
+// ❌ 잘못된 방법
+<div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px' }}>
+  <button className="border rounded px-3 py-1">
+    Click me
+  </button>
+</div>
+````
+
+### 반응형 브레이크포인트
+
+- Mobile: 기본 (< 640px)
+- Tablet: `sm:` (≥ 640px)
+- Desktop: `md:` (≥ 768px)
+- Large: `lg:` (≥ 1024px)
+- XL: `xl:` (≥ 1280px)
+
+### 다크 모드
+
+- 모든 색상은 CSS 변수 사용
+- `dark:` prefix로 다크 모드 스타일 추가
+- 이미지는 `dark:invert` 또는 별도 에셋 사용
+
+````
+
+### 12.6 디자인 토큰 문서화 (Tailwind CSS v4)
+
+#### 12.6.1 CSS 기반 설계 토큰
+
+```css
+/* src/styles/tokens.css */
+@import "tailwindcss";
+
+@theme {
+  /* ═══════════════════════════════════════════════════════
+     브랜드 컬러
+     ═══════════════════════════════════════════════════════ */
+
+  /* Primary - 메인 브랜드 컬러 */
+  --color-primary-50: oklch(0.97 0.02 250);
+  --color-primary-100: oklch(0.93 0.04 250);
+  --color-primary-200: oklch(0.86 0.08 250);
+  --color-primary-300: oklch(0.76 0.12 250);
+  --color-primary-400: oklch(0.64 0.16 250);
+  --color-primary-500: oklch(0.55 0.18 250);  /* 기본값 */
+  --color-primary-600: oklch(0.47 0.18 250);
+  --color-primary-700: oklch(0.40 0.16 250);
+  --color-primary-800: oklch(0.34 0.12 250);
+  --color-primary-900: oklch(0.28 0.08 250);
+  --color-primary-950: oklch(0.20 0.06 250);
+
+  /* Secondary - 보조 컬러 */
+  --color-secondary-50: oklch(0.98 0.01 260);
+  --color-secondary-500: oklch(0.60 0.02 260);
+  --color-secondary-900: oklch(0.25 0.02 260);
+
+  /* Success, Warning, Error */
+  --color-success: oklch(0.65 0.15 145);
+  --color-warning: oklch(0.75 0.15 70);
+  --color-error: oklch(0.55 0.20 25);
+
+  /* ═══════════════════════════════════════════════════════
+     시맨틱 컬러 (라이트/다크 자동 대응)
+     ═══════════════════════════════════════════════════════ */
+
+  --color-background: var(--color-white);
+  --color-foreground: var(--color-gray-950);
+  --color-muted: var(--color-gray-100);
+  --color-muted-foreground: var(--color-gray-500);
+  --color-border: var(--color-gray-200);
+
+  /* ═══════════════════════════════════════════════════════
+     스페이싱 스케일
+     ═══════════════════════════════════════════════════════ */
+
+  --spacing-page: 1.5rem;          /* 페이지 좌우 패딩 */
+  --spacing-section: 3rem;         /* 섹션 간 간격 */
+  --spacing-card: 1.5rem;          /* 카드 내부 패딩 */
+  --spacing-input: 0.75rem;        /* 입력 필드 패딩 */
+
+  /* ═══════════════════════════════════════════════════════
+     타이포그래피
+     ═══════════════════════════════════════════════════════ */
+
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --text-display: 3rem;            /* 48px - 히어로 */
+  --text-h1: 2.25rem;              /* 36px */
+  --text-h2: 1.875rem;             /* 30px */
+  --text-h3: 1.5rem;               /* 24px */
+  --text-h4: 1.25rem;              /* 20px */
+  --text-body: 1rem;               /* 16px */
+  --text-small: 0.875rem;          /* 14px */
+  --text-caption: 0.75rem;         /* 12px */
+
+  /* ═══════════════════════════════════════════════════════
+     반경 (Border Radius)
+     ═══════════════════════════════════════════════════════ */
+
+  --radius-sm: 0.25rem;            /* 4px - 작은 요소 */
+  --radius-md: 0.5rem;             /* 8px - 기본 */
+  --radius-lg: 0.75rem;            /* 12px - 카드 */
+  --radius-xl: 1rem;               /* 16px - 모달 */
+  --radius-full: 9999px;           /* 완전한 원 */
+
+  /* ═══════════════════════════════════════════════════════
+     그림자
+     ═══════════════════════════════════════════════════════ */
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+
+  /* ═══════════════════════════════════════════════════════
+     트랜지션
+     ═══════════════════════════════════════════════════════ */
+
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
+
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 다크 모드 오버라이드 */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-background: var(--color-gray-950);
+    --color-foreground: var(--color-gray-50);
+    --color-muted: var(--color-gray-900);
+    --color-muted-foreground: var(--color-gray-400);
+    --color-border: var(--color-gray-800);
+  }
+}
+````
+
+#### 12.6.2 토큰 사용 예시
+
+```tsx
+// 토큰을 활용한 컴포넌트 작성
+export function FeatureCard({ title, description, icon }: FeatureCardProps) {
+  return (
+    <div
+      className="
+      bg-background
+      border border-border
+      rounded-lg
+      p-card
+      shadow-sm
+      hover:shadow-md
+      transition-shadow duration-normal ease-out
+    "
+    >
+      <div className="text-primary-500 mb-4">{icon}</div>
+      <h3 className="text-h4 font-bold text-foreground mb-2">{title}</h3>
+      <p className="text-body text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+```
+
+### 12.7 컴포넌트 문서화 with JSDoc
+
+#### 12.7.1 AI가 이해하기 쉬운 컴포넌트 문서화
+
+```tsx
+// src/components/ui/status-badge.tsx
+
+/**
+ * StatusBadge - 상태를 시각적으로 표시하는 뱃지 컴포넌트
+ *
+ * @description
+ * 소설의 연재 상태, 사용자 등급 등 다양한 상태를 표시할 때 사용합니다.
+ * 각 상태별로 미리 정의된 색상과 스타일이 적용됩니다.
+ *
+ * @example
+ * // 기본 사용
+ * <StatusBadge status="ongoing" />
+ *
+ * @example
+ * // 크기 조절
+ * <StatusBadge status="completed" size="lg" />
+ *
+ * @example
+ * // 커스텀 라벨
+ * <StatusBadge status="hiatus" label="휴재 중" />
+ *
+ * @see Button - 클릭 가능한 액션에는 Button 사용
+ * @see Badge - 범용 뱃지는 Badge 컴포넌트 사용
+ */
+
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
+
+/**
+ * 상태 타입 정의
+ * - ongoing: 연재 중 (녹색)
+ * - completed: 완결 (파란색)
+ * - hiatus: 휴재 (노란색)
+ * - dropped: 중단 (빨간색)
+ */
+type Status = 'ongoing' | 'completed' | 'hiatus' | 'dropped';
+
+const statusBadgeVariants = cva('inline-flex items-center rounded-full font-medium', {
+  variants: {
+    status: {
+      ongoing: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      hiatus: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      dropped: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    },
+    size: {
+      sm: 'px-2 py-0.5 text-xs',
+      md: 'px-2.5 py-0.5 text-sm',
+      lg: 'px-3 py-1 text-base',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+/** 상태별 기본 라벨 */
+const defaultLabels: Record<Status, string> = {
+  ongoing: '연재 중',
+  completed: '완결',
+  hiatus: '휴재',
+  dropped: '중단',
+};
+
+interface StatusBadgeProps extends VariantProps<typeof statusBadgeVariants> {
+  /** 상태 값 (필수) */
+  status: Status;
+  /** 커스텀 라벨 (선택, 미지정 시 기본 라벨 사용) */
+  label?: string;
+  /** 추가 CSS 클래스 */
+  className?: string;
+}
+
+export function StatusBadge({ status, size, label, className }: StatusBadgeProps) {
+  return (
+    <span className={cn(statusBadgeVariants({ status, size }), className)}>
+      {label ?? defaultLabels[status]}
+    </span>
+  );
+}
+```
+
+#### 12.7.2 복합 컴포넌트 문서화
+
+```tsx
+// src/components/ui/novel-card.tsx
+
+/**
+ * NovelCard - 소설 정보를 카드 형태로 표시하는 컴포넌트
+ *
+ * @description
+ * 소설 목록, 검색 결과, 추천 섹션 등에서 소설 정보를 표시할 때 사용합니다.
+ * 커버 이미지, 제목, 작가, 장르, 통계 정보를 포함합니다.
+ *
+ * ## 사용 컨텍스트
+ * - 홈페이지 추천 소설
+ * - 장르별 소설 목록
+ * - 검색 결과
+ * - 작가 페이지 작품 목록
+ *
+ * ## 내부 사용 컴포넌트
+ * - Card (shadcn/ui)
+ * - StatusBadge (@/components/ui/status-badge)
+ * - Avatar (@/components/ui/avatar)
+ *
+ * @example
+ * // 기본 사용
+ * <NovelCard novel={novelData} />
+ *
+ * @example
+ * // 컴팩트 모드 (목록용)
+ * <NovelCard novel={novelData} variant="compact" />
+ *
+ * @example
+ * // 클릭 핸들러와 함께
+ * <NovelCard
+ *   novel={novelData}
+ *   onClick={(id) => router.push(`/novel/${id}`)}
+ * />
+ *
+ * @example
+ * // 그리드 레이아웃에서
+ * <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+ *   {novels.map(novel => (
+ *     <NovelCard key={novel.id} novel={novel} />
+ *   ))}
+ * </div>
+ */
+
+import Image from 'next/image';
+import { Card, CardContent } from '@/components/ui/card';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Eye, Heart, Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { Novel } from '@/types/novel';
+
+interface NovelCardProps {
+  /** 소설 데이터 객체 */
+  novel: Novel;
+  /** 카드 스타일 변형 */
+  variant?: 'default' | 'compact' | 'featured';
+  /** 클릭 이벤트 핸들러 */
+  onClick?: (novelId: string) => void;
+  /** 추가 CSS 클래스 */
+  className?: string;
+}
+
+export function NovelCard({ novel, variant = 'default', onClick, className }: NovelCardProps) {
+  // ... 구현
+}
+```
+
+### 12.8 컴포넌트 사용 매트릭스
+
+AI에게 "언제 어떤 컴포넌트를 쓸지" 명확히 전달:
+
+````markdown
+<!-- .cursorrules 또는 CLAUDE.md에 추가 -->
+
+## 컴포넌트 선택 가이드
+
+| 상황        | 사용할 컴포넌트                        | 예시             |
+| ----------- | -------------------------------------- | ---------------- |
+| 주요 액션   | `<Button>`                             | 저장, 제출, 확인 |
+| 보조 액션   | `<Button variant="outline">`           | 취소, 닫기       |
+| 위험한 액션 | `<Button variant="destructive">`       | 삭제, 탈퇴       |
+| 텍스트 링크 | `<Button variant="link">`              | 더보기, 자세히   |
+| 아이콘만    | `<Button variant="ghost" size="icon">` | 설정, 메뉴       |
+| 짧은 입력   | `<Input>`                              | 이름, 이메일     |
+| 긴 입력     | `<Textarea>`                           | 소개, 설명       |
+| 선택 (단일) | `<Select>`                             | 장르, 정렬       |
+| 선택 (다중) | `<Checkbox>` 그룹                      | 태그, 카테고리   |
+| On/Off      | `<Switch>`                             | 알림, 공개 설정  |
+| 정보 표시   | `<Card>`                               | 프로필, 통계     |
+| 상태 표시   | `<Badge>` or `<StatusBadge>`           | 연재중, VIP      |
+| 알림 메시지 | `<Toast>` (sonner)                     | 성공, 에러       |
+| 확인 요청   | `<AlertDialog>`                        | 삭제 확인        |
+| 사이드 패널 | `<Sheet>`                              | 모바일 메뉴      |
+| 상세 정보   | `<Dialog>`                             | 상세 보기        |
+| 로딩        | `<Skeleton>`                           | 컨텐츠 로딩      |
+| 빈 상태     | 커스텀 EmptyState                      | 검색 결과 없음   |
+
+### 컴포넌트 조합 패턴
+
+```tsx
+// 폼 제출 버튼
+<Button type="submit" disabled={isLoading}>
+  {isLoading ? <Spinner className="mr-2" /> : null}
+  저장하기
+</Button>
+
+// 목록 아이템 액션
+<div className="flex items-center gap-2">
+  <Button variant="ghost" size="icon">
+    <Edit className="h-4 w-4" />
+  </Button>
+  <Button variant="ghost" size="icon">
+    <Trash className="h-4 w-4" />
+  </Button>
+</div>
+
+// 통계 카드
+<Card>
+  <CardHeader>
+    <CardTitle>총 조회수</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="text-3xl font-bold">12,345</div>
+    <p className="text-sm text-muted-foreground">
+      지난 주 대비 +12%
+    </p>
+  </CardContent>
+</Card>
+```
+````
+
+````
+
+### 12.9 직접 프롬프트 컨텍스트 템플릿
+
+Rules 파일이 없거나 빠른 작업 시 사용:
+
+```markdown
+## UI 생성 프롬프트 템플릿
+
+### 템플릿 1: 새 컴포넌트 요청
+````
+
+다음 컴포넌트를 만들어주세요:
+
+**컴포넌트 정보:**
+
+- 이름: [컴포넌트명]
+- 용도: [사용 목적]
+- 위치: src/components/[category]/
+
+**디자인 시스템:**
+
+- UI 라이브러리: shadcn/ui 사용
+- 스타일링: Tailwind CSS (인라인 스타일 금지)
+- 색상: CSS 변수만 사용 (var(--primary) 등)
+
+**필요한 기능:**
+
+- [기능 1]
+- [기능 2]
+
+**참고 컴포넌트:**
+
+- 프로젝트 내 유사 컴포넌트: [경로]
+
+**반응형:**
+
+- 모바일: [설명]
+- 데스크톱: [설명]
+
+```
+
+### 템플릿 2: 기존 컴포넌트 수정
+```
+
+[컴포넌트 경로]를 다음과 같이 수정해주세요:
+
+**현재 문제:**
+
+- [문제 설명]
+
+**원하는 변경:**
+
+- [변경 1]
+- [변경 2]
+
+**유지해야 할 것:**
+
+- 기존 Props 인터페이스
+- 현재 사용 중인 CSS 변수
+- shadcn/ui 컴포넌트 사용
+
+**참고:**
+
+- 디자인 토큰: src/styles/tokens.css
+
+```
+
+### 템플릿 3: 페이지 레이아웃 요청
+```
+
+다음 페이지를 만들어주세요:
+
+**페이지 정보:**
+
+- 경로: /[route]
+- 용도: [설명]
+
+**레이아웃 구조:**
+
+```
+┌─────────────────────────────┐
+│ Header (기존 사용)          │
+├─────────────────────────────┤
+│                             │
+│ [메인 컨텐츠 영역]          │
+│                             │
+├─────────────────────────────┤
+│ Footer (기존 사용)          │
+└─────────────────────────────┘
+```
+
+**사용할 컴포넌트:**
+
+- Header: @/components/layout/Header
+- Footer: @/components/layout/Footer
+- Card: @/components/ui/card
+- Button: @/components/ui/button
+
+**데이터 요구사항:**
+
+- [API 엔드포인트]
+- [필요한 데이터]
+
+**상태 처리:**
+
+- 로딩: Skeleton 사용
+- 에러: Alert 컴포넌트 사용
+- 빈 상태: EmptyState 패턴 사용
+
+```
+
+```
+
+### 12.10 Before/After: 디자인 시스템 컨텍스트 효과
+
+#### Before (컨텍스트 없이)
+
+**프롬프트:** "프로필 카드 만들어줘"
+
+```tsx
+// AI가 생성한 코드 (컨텍스트 없음)
+function ProfileCard({ user }) {
+  return (
+    <div
+      style={{
+        border: '1px solid #ccc',
+        borderRadius: '8px',
+        padding: '16px',
+        maxWidth: '300px',
+      }}
+    >
+      <img
+        src={user.avatar}
+        alt="Profile"
+        style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '50%',
+        }}
+      />
+      <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>{user.name}</h2>
+      <p style={{ color: '#666' }}>{user.bio}</p>
+      <button
+        style={{
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: 'none',
+          padding: '8px 16px',
+          borderRadius: '4px',
+        }}
+      >
+        Follow
+      </button>
+    </div>
+  );
+}
+```
+
+**문제점:**
+
+- 인라인 스타일 사용
+- 하드코딩된 색상
+- 프로젝트 컴포넌트 미사용
+- 접근성 미고려
+
+#### After (디자인 시스템 컨텍스트 제공)
+
+**프롬프트 + .cursorrules:**
+
+```tsx
+// AI가 생성한 코드 (컨텍스트 있음)
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+
+interface ProfileCardProps {
+  user: {
+    name: string;
+    avatar?: string;
+    bio?: string;
+    isFollowing?: boolean;
+  };
+  onFollow?: () => void;
+}
+
+export function ProfileCard({ user, onFollow }: ProfileCardProps) {
+  const initials = user.name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+
+  return (
+    <Card className="w-full max-w-sm">
+      <CardContent className="pt-6">
+        <div className="flex flex-col items-center text-center">
+          <Avatar className="h-20 w-20 mb-4">
+            <AvatarImage src={user.avatar} alt={`${user.name} 프로필`} />
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+
+          <h2 className="text-lg font-semibold text-foreground">{user.name}</h2>
+
+          {user.bio && (
+            <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
+          )}
+
+          <Button
+            onClick={onFollow}
+            variant={user.isFollowing ? 'outline' : 'default'}
+            className="mt-4 w-full"
+          >
+            {user.isFollowing ? '팔로잉' : '팔로우'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+**개선된 점:**
+
+- ✅ shadcn/ui 컴포넌트 사용
+- ✅ CSS 변수 기반 색상
+- ✅ TypeScript Props 정의
+- ✅ 접근성 (alt 텍스트)
+- ✅ 한국어 UI 텍스트
+- ✅ 반응형 고려
+
+### 12.11 디자인 시스템 전달 체크리스트
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│               디자인 시스템 전달 체크리스트                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  레벨 1: 기본 설정 (필수)                                       │
+│  ═══════════════════════                                        │
+│  □ .cursorrules 또는 CLAUDE.md에 Tech Stack 명시               │
+│  □ UI 라이브러리 명시 (shadcn/ui, MUI, etc.)                   │
+│  □ 스타일링 방식 명시 (Tailwind, CSS Modules, etc.)            │
+│  □ "하지 말아야 할 것" 목록 작성                               │
+│                                                                 │
+│  레벨 2: 컴포넌트 가이드 (권장)                                 │
+│  ═══════════════════════════                                    │
+│  □ 설치된 UI 컴포넌트 목록                                     │
+│  □ 컴포넌트별 import 경로                                      │
+│  □ 주요 컴포넌트 variants 문서화                               │
+│  □ 컴포넌트 선택 가이드 (상황별)                               │
+│                                                                 │
+│  레벨 3: 디자인 토큰 (심화)                                     │
+│  ═══════════════════════                                        │
+│  □ 색상 시스템 (CSS 변수)                                      │
+│  □ 스페이싱 스케일                                             │
+│  □ 타이포그래피 스케일                                         │
+│  □ 반응형 브레이크포인트                                       │
+│                                                                 │
+│  레벨 4: 패턴 라이브러리 (고급)                                 │
+│  ═══════════════════════════                                    │
+│  □ 로딩/에러/빈 상태 패턴                                      │
+│  □ 폼 패턴                                                     │
+│  □ 레이아웃 패턴                                               │
+│  □ 컴포넌트 조합 예시                                          │
+│                                                                 │
+│  레벨 5: MCP 서버 (선택)                                        │
+│  ═══════════════════════                                        │
+│  □ 디자인 토큰 조회 도구                                       │
+│  □ 컴포넌트 목록 조회 도구                                     │
+│  □ 사용 예시 조회 도구                                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 12.12 다음 챕터 미리보기
+
+**챕터 13: 반응형 디자인과 AI 협업**에서는 모바일-퍼스트 접근법, 브레이크포인트별 레이아웃 지시, 그리고 AI가 생성한 UI가 모든 화면 크기에서 잘 작동하도록 하는 테스트 전략을 다룹니다.
 
 ---
 
