@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, List, Settings, Home, Bookmark, Sun, Moon } from 'lucide-react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -117,7 +117,7 @@ const mockChapter = {
 };
 
 export default function ChapterReaderPage() {
-  const _params = useParams(); // Will be used for fetching real chapter data
+  // params will be used for fetching real chapter data when connected to backend
   const router = useRouter();
   const { fontSize, lineHeight, theme, setFontSize, setLineHeight, setTheme } = useReaderStore();
 
