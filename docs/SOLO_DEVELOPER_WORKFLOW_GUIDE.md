@@ -6404,7 +6404,809 @@ export function ProfileCard({ user, onFollow }: ProfileCardProps) {
 
 ## 챕터 13: 반응형 디자인과 AI 협업
 
-> 작성 예정
+### 13.1 AI는 왜 데스크톱 우선으로 코드를 생성하는가?
+
+AI 코딩 도구는 기본적으로 **데스크톱 우선(Desktop-first)** 코드를 생성하는 경향이 있습니다. 이는 학습 데이터의 특성과 프롬프트의 모호함 때문입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              AI가 데스크톱 우선으로 생성하는 이유                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 학습 데이터 편향                                             │
+│  ─────────────────────                                          │
+│  • 대부분의 튜토리얼과 예제가 데스크톱 기준                       │
+│  • 반응형은 "추가 작업"으로 취급됨                               │
+│  • 모바일 스타일은 미디어 쿼리 안에 "숨겨져" 있음                │
+│                                                                 │
+│  2. 프롬프트의 암묵적 가정                                       │
+│  ──────────────────────────                                     │
+│  "히어로 섹션 만들어줘"                                          │
+│  → AI: "넓은 화면 기준으로 만들면 되겠지?"                       │
+│                                                                 │
+│  3. 시각적 복잡성                                                │
+│  ──────────────────                                             │
+│  • 데스크톱 레이아웃이 더 "완성도 높아" 보임                     │
+│  • 다중 컬럼, 사이드바 등 시각적으로 인상적                      │
+│  • AI는 "인상적인" 결과를 선호하는 경향                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**데스크톱 우선 코드의 문제:**
+
+```tsx
+// ❌ AI가 흔히 생성하는 데스크톱 우선 코드
+const Hero = () => (
+  <div className="flex items-center justify-between px-20 py-16">
+    <div className="w-1/2">
+      <h1 className="text-5xl font-bold">Welcome</h1>
+      <p className="text-xl mt-4">Some description here</p>
+    </div>
+    <div className="w-1/2">
+      <img src="/hero.jpg" className="w-full" />
+    </div>
+  </div>
+);
+
+// 모바일에서의 문제:
+// • px-20: 작은 화면에서 콘텐츠가 좁아짐
+// • w-1/2: 두 컬럼이 너무 좁아서 읽기 어려움
+// • text-5xl: 작은 화면에서 너무 큼
+// • flex 방향이 항상 가로 → 세로 스크롤 필요
+```
+
+### 13.2 Mobile-First가 중요한 이유
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 Mobile-First 접근법의 장점                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  통계적 현실:                                                    │
+│  ─────────────                                                  │
+│  • 전 세계 웹 트래픽의 ~60%가 모바일                             │
+│  • Google은 Mobile-First 인덱싱 사용                            │
+│  • 모바일 성능이 SEO에 직접 영향                                 │
+│                                                                 │
+│  개발 효율성:                                                    │
+│  ─────────────                                                  │
+│  • 작은 화면 → 큰 화면 확장이 더 쉬움                            │
+│  • 핵심 콘텐츠에 집중하게 됨                                     │
+│  • 불필요한 요소 자연스럽게 제거                                 │
+│                                                                 │
+│  CSS 코드량:                                                     │
+│  ────────────                                                   │
+│  • Mobile-First: 기본 스타일 + 확장                             │
+│  • Desktop-First: 기본 스타일 + 축소 + 재정의                   │
+│  → Mobile-First가 더 적은 CSS, 더 나은 성능                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 13.3 AI에게 Mobile-First 강제하는 프롬프트
+
+**기본 지시문 (Rules 파일에 추가):**
+
+````markdown
+## 반응형 디자인 규칙
+
+### 필수: Mobile-First 접근법
+
+모든 스타일은 모바일 기준으로 먼저 작성하고,
+큰 화면으로 확장합니다.
+
+```tsx
+// ✅ 올바른 순서 (Mobile-First)
+className="
+  w-full          // 모바일: 전체 너비
+  sm:w-1/2        // 태블릿: 절반
+  lg:w-1/3        // 데스크톱: 1/3
+"
+
+// ❌ 잘못된 순서 (Desktop-First)
+className="
+  w-1/3           // 데스크톱 기준
+  md:w-1/2        // 태블릿에서 축소?
+  sm:w-full       // 모바일에서 확장?
+"
+```
+````
+
+### 브레이크포인트 규칙
+
+- 기본(default): 모바일 (< 640px)
+- sm: 640px 이상
+- md: 768px 이상
+- lg: 1024px 이상
+- xl: 1280px 이상
+
+### 클래스 작성 순서
+
+항상 이 순서로 작성: base → sm → md → lg → xl
+
+````
+
+**구체적인 컴포넌트 요청 프롬프트:**
+
+```markdown
+다음 규칙을 따라 히어로 섹션을 만들어줘:
+
+## 레이아웃 요구사항
+- 모바일 (기본):
+  • 단일 컬럼, 세로 스택
+  • 이미지가 텍스트 아래
+  • 패딩: 16px (p-4)
+  • 제목: text-3xl
+
+- 태블릿 (md:):
+  • 2컬럼 레이아웃
+  • 텍스트와 이미지 나란히
+  • 패딩: 24px (p-6)
+  • 제목: text-4xl
+
+- 데스크톱 (lg:):
+  • 더 넓은 여백
+  • 패딩: 32px (p-8)
+  • 제목: text-5xl
+  • 최대 너비 제한 (max-w-7xl mx-auto)
+
+## 필수 사항
+- Mobile-First로 작성 (기본 스타일이 모바일)
+- Tailwind 브레이크포인트 사용
+- 이미지는 항상 반응형 (w-full)
+````
+
+### 13.4 반응형 레이아웃 패턴 라이브러리
+
+AI에게 제공할 **검증된 반응형 패턴**들:
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 패턴 1: 스택 → 그리드
+// ═══════════════════════════════════════════════════════════════
+
+// 모바일: 세로 스택 → 태블릿+: 2컬럼 그리드
+const StackToGrid = () => (
+  <div
+    className="
+    flex flex-col gap-4
+    md:grid md:grid-cols-2 md:gap-6
+    lg:grid-cols-3 lg:gap-8
+  "
+  >
+    {items.map((item) => (
+      <Card key={item.id} {...item} />
+    ))}
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 2: 히어로 섹션 (이미지 + 텍스트)
+// ═══════════════════════════════════════════════════════════════
+
+const HeroSection = () => (
+  <section
+    className="
+    px-4 py-8
+    md:px-6 md:py-12
+    lg:px-8 lg:py-16
+  "
+  >
+    <div
+      className="
+      flex flex-col gap-6
+      lg:flex-row lg:items-center lg:gap-12
+      max-w-7xl mx-auto
+    "
+    >
+      {/* 텍스트 영역 */}
+      <div className="lg:w-1/2">
+        <h1
+          className="
+          text-3xl font-bold
+          md:text-4xl
+          lg:text-5xl
+        "
+        >
+          제목
+        </h1>
+        <p
+          className="
+          mt-4 text-muted-foreground
+          md:text-lg
+          lg:text-xl
+        "
+        >
+          설명 텍스트
+        </p>
+      </div>
+
+      {/* 이미지 영역 */}
+      <div className="lg:w-1/2">
+        <img src="/hero.jpg" alt="히어로 이미지" className="w-full rounded-lg" />
+      </div>
+    </div>
+  </section>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 3: 사이드바 레이아웃
+// ═══════════════════════════════════════════════════════════════
+
+const SidebarLayout = () => (
+  <div
+    className="
+    flex flex-col
+    lg:flex-row
+    min-h-screen
+  "
+  >
+    {/* 사이드바: 모바일에서는 상단, 데스크톱에서는 좌측 */}
+    <aside
+      className="
+      w-full p-4 border-b
+      lg:w-64 lg:border-b-0 lg:border-r lg:min-h-screen
+    "
+    >
+      <nav>...</nav>
+    </aside>
+
+    {/* 메인 콘텐츠 */}
+    <main
+      className="
+      flex-1 p-4
+      md:p-6
+      lg:p-8
+    "
+    >
+      {children}
+    </main>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 4: 카드 그리드 (자동 조절)
+// ═══════════════════════════════════════════════════════════════
+
+const AutoGrid = () => (
+  <div
+    className="
+    grid gap-4
+    grid-cols-1
+    sm:grid-cols-2
+    lg:grid-cols-3
+    xl:grid-cols-4
+  "
+  >
+    {items.map((item) => (
+      <Card key={item.id} {...item} />
+    ))}
+  </div>
+);
+
+// 또는 auto-fill 사용 (더 유연함)
+const FluidGrid = () => (
+  <div
+    className="
+    grid gap-4
+    grid-cols-[repeat(auto-fill,minmax(280px,1fr))]
+  "
+  >
+    {items.map((item) => (
+      <Card key={item.id} {...item} />
+    ))}
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 5: 반응형 타이포그래피
+// ═══════════════════════════════════════════════════════════════
+
+const ResponsiveTypography = () => (
+  <>
+    {/* 페이지 제목 */}
+    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">제목</h1>
+
+    {/* 섹션 제목 */}
+    <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold">섹션 제목</h2>
+
+    {/* 본문 */}
+    <p className="text-base md:text-lg text-muted-foreground">본문 텍스트</p>
+  </>
+);
+```
+
+### 13.5 브레이크포인트 일관성 유지하기
+
+**프로젝트 전체에서 동일한 브레이크포인트를 사용해야 합니다.**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 표준 브레이크포인트 시스템                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Tailwind 기본값 (권장):                                         │
+│  ──────────────────────                                         │
+│                                                                 │
+│  │ 모바일 │   sm   │   md   │   lg    │   xl    │   2xl   │    │
+│  │<640px │ 640px │ 768px │ 1024px │ 1280px │ 1536px │           │
+│  │───────┼───────┼───────┼────────┼────────┼────────│           │
+│  │ 📱    │ 📱    │ 💻    │  🖥️   │  🖥️   │  🖥️   │           │
+│  │       │ 가로  │ 태블릿│데스크톱│ 와이드 │ 초와이드│           │
+│                                                                 │
+│  실제 사용 빈도:                                                 │
+│  ────────────────                                               │
+│  • 기본 (모바일): 매우 높음 ████████████                         │
+│  • md (태블릿):   높음     ████████                              │
+│  • lg (데스크톱): 높음     ████████                              │
+│  • sm, xl, 2xl:  낮음     ████                                  │
+│                                                                 │
+│  💡 대부분의 경우 기본 + md + lg만으로 충분                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Rules 파일에 추가할 브레이크포인트 규칙:**
+
+```markdown
+## 브레이크포인트 사용 규칙
+
+### 허용된 브레이크포인트
+
+- 기본: < 640px (모바일 세로)
+- md: 768px+ (태블릿/모바일 가로)
+- lg: 1024px+ (데스크톱)
+
+### 제한된 브레이크포인트
+
+다음은 특별한 이유가 있을 때만 사용:
+
+- sm: 640px (거의 사용 안 함)
+- xl: 1280px (와이드 데스크톱 전용 기능)
+- 2xl: 1536px (거의 사용 안 함)
+
+### 커스텀 브레이크포인트 금지
+
+임의의 값 (예: max-w-[847px]) 사용 금지.
+표준 브레이크포인트만 사용하세요.
+```
+
+### 13.6 반응형 이미지 처리
+
+**Next.js Image 컴포넌트 패턴:**
+
+```tsx
+import Image from 'next/image';
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 1: 전체 너비 반응형 이미지
+// ═══════════════════════════════════════════════════════════════
+
+const ResponsiveImage = () => (
+  <div className="relative w-full aspect-video">
+    <Image
+      src="/hero.jpg"
+      alt="히어로 이미지"
+      fill
+      sizes="100vw"
+      className="object-cover"
+      priority // LCP 이미지에 필수
+    />
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 2: 브레이크포인트별 다른 크기
+// ═══════════════════════════════════════════════════════════════
+
+const OptimizedImage = () => (
+  <Image
+    src="/product.jpg"
+    alt="제품 이미지"
+    width={800}
+    height={600}
+    sizes="
+      (max-width: 640px) 100vw,
+      (max-width: 1024px) 50vw,
+      33vw
+    "
+    className="w-full h-auto"
+  />
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 3: 아트 디렉션 (브레이크포인트별 다른 이미지)
+// ═══════════════════════════════════════════════════════════════
+
+const ArtDirectedImage = () => (
+  <picture>
+    {/* 데스크톱: 가로형 이미지 */}
+    <source media="(min-width: 1024px)" srcSet="/hero-desktop.jpg" />
+    {/* 태블릿: 정사각형 이미지 */}
+    <source media="(min-width: 768px)" srcSet="/hero-tablet.jpg" />
+    {/* 모바일: 세로형 이미지 */}
+    <img src="/hero-mobile.jpg" alt="히어로 이미지" className="w-full h-auto" />
+  </picture>
+);
+```
+
+### 13.7 터치 타겟과 모바일 인터랙션
+
+**모바일 사용성의 핵심: 터치 타겟 크기**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    터치 타겟 가이드라인                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  최소 크기 권장:                                                 │
+│  ────────────────                                               │
+│  • Apple HIG: 44x44pt                                           │
+│  • Material Design: 48x48dp                                     │
+│  • WCAG 2.1: 44x44 CSS px                                       │
+│                                                                 │
+│  Tailwind 클래스:                                                │
+│  ─────────────────                                              │
+│  • min-h-11 min-w-11 (44px)                                     │
+│  • 또는 h-12 w-12 (48px) - 더 안전                              │
+│                                                                 │
+│  간격:                                                           │
+│  ──────                                                         │
+│  • 터치 타겟 사이 최소 8px 간격                                  │
+│  • 밀집된 UI에서는 더 넓은 간격 필요                             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**모바일 친화적 컴포넌트 패턴:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 아이콘 버튼 - 터치 영역 확보
+// ═══════════════════════════════════════════════════════════════
+
+const IconButton = ({ icon: Icon, label, onClick }) => (
+  <button
+    onClick={onClick}
+    className="
+      min-h-11 min-w-11       /* 최소 44px */
+      flex items-center justify-center
+      rounded-lg
+      hover:bg-accent
+      active:scale-95         /* 터치 피드백 */
+      transition-transform
+    "
+    aria-label={label}
+  >
+    <Icon className="h-5 w-5" />
+  </button>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 네비게이션 링크 - 넓은 터치 영역
+// ═══════════════════════════════════════════════════════════════
+
+const NavLink = ({ href, children }) => (
+  <Link
+    href={href}
+    className="
+      block                   /* 전체 영역 클릭 가능 */
+      px-4 py-3              /* 충분한 패딩 */
+      min-h-11
+      rounded-lg
+      hover:bg-accent
+      active:bg-accent/80
+    "
+  >
+    {children}
+  </Link>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 카드 - 전체 클릭 가능
+// ═══════════════════════════════════════════════════════════════
+
+const ClickableCard = ({ href, title, description }) => (
+  <Link href={href} className="block group">
+    <Card
+      className="
+      transition-colors
+      group-hover:bg-accent
+      group-active:scale-[0.98]
+    "
+    >
+      <CardContent className="p-4 md:p-6">
+        <h3 className="font-semibold">{title}</h3>
+        <p className="text-muted-foreground mt-1">{description}</p>
+      </CardContent>
+    </Card>
+  </Link>
+);
+```
+
+### 13.8 반응형 네비게이션 패턴
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 모바일: 햄버거 메뉴 / 데스크톱: 가로 네비게이션
+// ═══════════════════════════════════════════════════════════════
+
+'use client';
+
+import { useState } from 'react';
+import { Menu, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+const navItems = [
+  { label: '홈', href: '/' },
+  { label: '제품', href: '/products' },
+  { label: '가격', href: '/pricing' },
+  { label: '문의', href: '/contact' },
+];
+
+export function ResponsiveNav() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <nav className="border-b">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* 로고 */}
+          <Link href="/" className="font-bold text-xl">
+            Logo
+          </Link>
+
+          {/* 데스크톱 네비게이션 */}
+          <div className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="px-4 py-2 rounded-lg hover:bg-accent transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* 모바일 메뉴 버튼 */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
+            aria-expanded={isOpen}
+          >
+            {isOpen ? <X /> : <Menu />}
+          </Button>
+        </div>
+      </div>
+
+      {/* 모바일 메뉴 */}
+      {isOpen && (
+        <div className="md:hidden border-t">
+          <div className="px-4 py-2 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="
+                  block px-4 py-3
+                  rounded-lg
+                  hover:bg-accent
+                  transition-colors
+                "
+                onClick={() => setIsOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+}
+```
+
+### 13.9 컨테이너와 최대 너비 전략
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 표준 컨테이너 패턴
+// ═══════════════════════════════════════════════════════════════
+
+// 옵션 1: 고정 최대 너비 + 자동 중앙 정렬
+const Container = ({ children }) => (
+  <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">{children}</div>
+);
+
+// 옵션 2: 콘텐츠 유형별 다른 너비
+const containers = {
+  // 블로그/글 읽기: 좁은 너비
+  prose: 'max-w-prose mx-auto px-4', // ~65ch
+
+  // 일반 콘텐츠: 중간 너비
+  content: 'max-w-5xl mx-auto px-4 md:px-6', // 1024px
+
+  // 대시보드/앱: 넓은 너비
+  wide: 'max-w-7xl mx-auto px-4 md:px-6 lg:px-8', // 1280px
+
+  // 전체 너비 (히어로 등)
+  full: 'w-full px-4 md:px-6 lg:px-8',
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 페이지 레이아웃 예시
+// ═══════════════════════════════════════════════════════════════
+
+const PageLayout = () => (
+  <>
+    {/* 히어로: 전체 너비 배경, 컨텐츠는 제한 */}
+    <section className="bg-primary text-primary-foreground">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-24">
+        <h1>히어로 제목</h1>
+      </div>
+    </section>
+
+    {/* 본문: 읽기 편한 너비 */}
+    <article className="max-w-prose mx-auto px-4 py-8">
+      <p>본문 내용...</p>
+    </article>
+
+    {/* 카드 그리드: 넓은 너비 */}
+    <section className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{/* 카드들 */}</div>
+    </section>
+  </>
+);
+```
+
+### 13.10 반응형 테이블 처리
+
+테이블은 모바일에서 가장 다루기 어려운 요소 중 하나입니다.
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 패턴 1: 가로 스크롤 (데이터 테이블)
+// ═══════════════════════════════════════════════════════════════
+
+const ScrollableTable = () => (
+  <div className="overflow-x-auto -mx-4 md:mx-0">
+    <div className="inline-block min-w-full align-middle">
+      <table className="min-w-full">
+        <thead>
+          <tr className="border-b">
+            <th className="px-4 py-3 text-left">이름</th>
+            <th className="px-4 py-3 text-left">이메일</th>
+            <th className="px-4 py-3 text-left">역할</th>
+            <th className="px-4 py-3 text-right">가입일</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((user) => (
+            <tr key={user.id} className="border-b">
+              <td className="px-4 py-3">{user.name}</td>
+              <td className="px-4 py-3">{user.email}</td>
+              <td className="px-4 py-3">{user.role}</td>
+              <td className="px-4 py-3 text-right">{user.joinedAt}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// 패턴 2: 카드로 변환 (모바일에서)
+// ═══════════════════════════════════════════════════════════════
+
+const ResponsiveTable = ({ users }) => (
+  <>
+    {/* 데스크톱: 테이블 */}
+    <table className="hidden md:table w-full">
+      <thead>...</thead>
+      <tbody>...</tbody>
+    </table>
+
+    {/* 모바일: 카드 리스트 */}
+    <div className="md:hidden space-y-4">
+      {users.map((user) => (
+        <Card key={user.id}>
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="font-medium">{user.name}</p>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
+              </div>
+              <Badge>{user.role}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">가입: {user.joinedAt}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </>
+);
+```
+
+### 13.11 AI 프롬프트: 반응형 컴포넌트 요청 템플릿
+
+```markdown
+## 반응형 컴포넌트 요청 템플릿
+
+다음 요구사항에 맞는 [컴포넌트명]을 만들어줘:
+
+### 레이아웃 명세
+
+**모바일 (기본, < 768px):**
+
+- 레이아웃: [단일 컬럼 / 세로 스택]
+- 패딩: [p-4]
+- 폰트 크기: [제목 text-2xl, 본문 text-base]
+- 특이사항: [예: 이미지가 텍스트 위에]
+
+**태블릿 (md:768px+):**
+
+- 레이아웃: [2컬럼 / 그리드]
+- 패딩: [p-6]
+- 폰트 크기: [제목 text-3xl]
+- 특이사항: [예: 사이드바 표시]
+
+**데스크톱 (lg:1024px+):**
+
+- 레이아웃: [3컬럼 / 사이드바 + 콘텐츠]
+- 패딩: [p-8]
+- 최대 너비: [max-w-7xl mx-auto]
+- 폰트 크기: [제목 text-4xl]
+
+### 필수 요구사항
+
+- [ ] Mobile-First 방식으로 작성
+- [ ] 터치 타겟 최소 44px
+- [ ] 이미지는 반응형 (w-full 또는 fill)
+- [ ] 가로 스크롤 없어야 함
+- [ ] Tailwind 표준 브레이크포인트만 사용
+```
+
+### 13.12 반응형 디자인 체크리스트
+
+```
+□ Mobile-First 작성 확인
+  - 기본 스타일이 모바일용인가?
+  - 브레이크포인트가 작은 것 → 큰 것 순서인가?
+
+□ 브레이크포인트 일관성
+  - 프로젝트 전체에서 동일한 브레이크포인트 사용?
+  - 커스텀 브레이크포인트 사용하지 않았는가?
+
+□ 터치 인터랙션
+  - 버튼/링크가 최소 44x44px인가?
+  - 터치 타겟 사이 충분한 간격이 있는가?
+  - 호버 상태 외에 active 상태도 있는가?
+
+□ 이미지 반응형
+  - 이미지가 컨테이너를 넘치지 않는가?
+  - Next.js Image에 sizes 속성이 있는가?
+  - LCP 이미지에 priority 속성이 있는가?
+
+□ 레이아웃 검증
+  - 모바일에서 가로 스크롤이 없는가?
+  - 텍스트가 읽기 편한 크기인가?
+  - 컨테이너 최대 너비가 설정되어 있는가?
+
+□ 실제 디바이스 테스트
+  - Chrome DevTools 모바일 뷰 확인
+  - 실제 모바일 기기에서 테스트
+  - 태블릿 가로/세로 모드 테스트
+```
+
+### 13.13 다음 챕터 미리보기
+
+**챕터 14: 상태별 UI 패턴 완벽 구현**에서는 로딩 상태(Skeleton), 에러 상태, 빈 상태(Empty State), 성공 피드백 등 AI가 자주 누락하는 UI 상태들을 체계적으로 구현하는 방법을 다룹니다.
 
 ---
 
