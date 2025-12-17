@@ -9280,7 +9280,1098 @@ jobs:
 
 ## 챕터 16: 마이크로 인터랙션과 애니메이션
 
-> 작성 예정
+### 16.1 마이크로 인터랙션이란?
+
+**마이크로 인터랙션**은 사용자 액션에 대한 작은 피드백입니다. 버튼 클릭 시 살짝 눌리는 효과, 좋아요 버튼의 하트 애니메이션, 토글 스위치의 부드러운 전환 등이 모두 마이크로 인터랙션입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              마이크로 인터랙션의 4가지 요소                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 트리거 (Trigger)                                             │
+│  ─────────────────────                                          │
+│  • 사용자 액션: 클릭, 호버, 스크롤, 드래그                        │
+│  • 시스템 이벤트: 데이터 로드 완료, 에러 발생                     │
+│                                                                 │
+│  2. 규칙 (Rules)                                                 │
+│  ───────────────                                                │
+│  • 트리거에 대한 반응 정의                                        │
+│  • 예: 버튼 클릭 → 0.95배로 축소 후 복귀                         │
+│                                                                 │
+│  3. 피드백 (Feedback)                                            │
+│  ─────────────────────                                          │
+│  • 시각적: 색상 변화, 크기 변화, 움직임                           │
+│  • 청각적: 클릭 사운드 (선택적)                                   │
+│  • 촉각적: 햅틱 피드백 (모바일)                                   │
+│                                                                 │
+│  4. 루프와 모드 (Loops & Modes)                                  │
+│  ───────────────────────────────                                │
+│  • 반복되는 애니메이션 (로딩 스피너)                              │
+│  • 상태에 따른 다른 동작 (토글 on/off)                           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 16.2 왜 마이크로 인터랙션이 중요한가?
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              애니메이션 없는 UI vs 있는 UI                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  애니메이션 없이:                                                 │
+│  ─────────────────                                              │
+│  [버튼 클릭] → (아무 피드백 없음) → 결과 표시                     │
+│                                                                 │
+│  사용자 생각: "클릭됐나? 작동하는 건가?"                          │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  애니메이션 있을 때:                                              │
+│  ────────────────────                                           │
+│  [버튼 클릭] → 버튼 살짝 눌림 → 로딩 스피너 → 체크 애니메이션    │
+│                                                                 │
+│  사용자 생각: "클릭됐고, 처리 중이고, 성공했구나!"                │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  💡 마이크로 인터랙션의 효과:                                     │
+│  • 시스템이 반응한다는 확신 제공                                  │
+│  • 현재 상태에 대한 명확한 피드백                                 │
+│  • 감정적 연결 형성 (제품이 "살아있는" 느낌)                      │
+│  • 체감 속도 향상 (실제 속도는 같아도 빠르게 느껴짐)              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 16.3 애니메이션 Duration과 Easing 가이드
+
+**Duration (지속 시간):**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                애니메이션 Duration 가이드                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Duration        용도                         예시               │
+│  ──────────────  ─────────────────────────── ─────────────────  │
+│                                                                 │
+│  50-100ms        즉각적 피드백               버튼 색상 변화      │
+│                  "순간적으로 느껴져야 함"    호버 상태 변경      │
+│                                                                 │
+│  150-200ms       빠른 전환                   드롭다운 열기      │
+│                  "빠르지만 눈에 보임"        툴팁 표시          │
+│                                                                 │
+│  200-300ms       표준 전환                   모달 열기          │
+│                  "자연스러운 움직임"         카드 확장          │
+│                                                                 │
+│  300-500ms       강조 애니메이션             페이지 전환        │
+│                  "주목을 끌어야 함"          성공 체크 표시     │
+│                                                                 │
+│  500ms+          특수 효과                   온보딩 애니메이션  │
+│                  "스토리텔링"                로고 애니메이션    │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  ⚠️ 주의: 300ms 이상은 사용자가 "기다린다"고 느낌                │
+│          일반적인 UI 전환은 200-300ms가 최적                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Easing (가속도 곡선):**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Easing 함수 가이드                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ease-out (권장: 대부분의 UI 전환)                               │
+│  ──────────────────────────────────                             │
+│  • 빠르게 시작 → 천천히 끝                                       │
+│  • "자연스러운 감속"                                             │
+│  • 용도: 요소 등장, 모달 열기, 드롭다운                          │
+│  • CSS: cubic-bezier(0, 0, 0.2, 1)                              │
+│                                                                 │
+│  시작 ████████░░░░ 끝                                            │
+│       빠름      느림                                             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  ease-in (퇴장 애니메이션)                                       │
+│  ─────────────────────────                                      │
+│  • 천천히 시작 → 빠르게 끝                                       │
+│  • "가속하며 떠남"                                               │
+│  • 용도: 요소 퇴장, 모달 닫기                                    │
+│  • CSS: cubic-bezier(0.4, 0, 1, 1)                              │
+│                                                                 │
+│  시작 ░░░░████████ 끝                                            │
+│       느림      빠름                                             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  ease-in-out (양방향 전환)                                       │
+│  ───────────────────────                                        │
+│  • 천천히 시작 → 빠르게 → 천천히 끝                              │
+│  • "부드러운 왕복"                                               │
+│  • 용도: 토글, 스와이프, 위치 이동                               │
+│  • CSS: cubic-bezier(0.4, 0, 0.2, 1)                            │
+│                                                                 │
+│  시작 ░░░████░░░ 끝                                              │
+│       느림 빠름 느림                                             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  spring (물리 기반, Framer Motion)                               │
+│  ─────────────────────────────────                              │
+│  • 탄성 있는 움직임                                              │
+│  • "살아있는" 느낌                                               │
+│  • 용도: 버튼 피드백, 드래그, 바운스                             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 16.4 CSS만으로 구현하는 기본 애니메이션
+
+**Tailwind CSS 기본 애니메이션:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 버튼 호버/클릭 효과
+// ═══════════════════════════════════════════════════════════════
+
+// 기본 버튼 (호버 시 밝아짐, 클릭 시 눌림)
+<button className="
+  bg-primary text-primary-foreground
+  px-4 py-2 rounded-lg
+  transition-all duration-200
+  hover:bg-primary/90
+  active:scale-95
+">
+  Click me
+</button>
+
+// 아웃라인 버튼 (호버 시 배경 채워짐)
+<button className="
+  border border-primary text-primary
+  px-4 py-2 rounded-lg
+  transition-all duration-200
+  hover:bg-primary hover:text-primary-foreground
+  active:scale-95
+">
+  Outline
+</button>
+
+// 고스트 버튼 (호버 시 배경 나타남)
+<button className="
+  text-primary
+  px-4 py-2 rounded-lg
+  transition-colors duration-150
+  hover:bg-primary/10
+  active:bg-primary/20
+">
+  Ghost
+</button>
+
+// ═══════════════════════════════════════════════════════════════
+// 카드 호버 효과
+// ═══════════════════════════════════════════════════════════════
+
+// 떠오르는 효과
+<div className="
+  bg-card rounded-lg p-6 shadow-sm
+  transition-all duration-300
+  hover:shadow-lg hover:-translate-y-1
+">
+  Card content
+</div>
+
+// 테두리 강조 효과
+<div className="
+  bg-card rounded-lg p-6
+  border-2 border-transparent
+  transition-colors duration-200
+  hover:border-primary
+">
+  Card content
+</div>
+
+// ═══════════════════════════════════════════════════════════════
+// 링크/네비게이션 효과
+// ═══════════════════════════════════════════════════════════════
+
+// 밑줄 애니메이션
+<a className="
+  relative
+  after:absolute after:bottom-0 after:left-0
+  after:h-0.5 after:w-0 after:bg-primary
+  after:transition-all after:duration-300
+  hover:after:w-full
+">
+  Animated Link
+</a>
+
+// ═══════════════════════════════════════════════════════════════
+// 로딩 애니메이션 (Tailwind 내장)
+// ═══════════════════════════════════════════════════════════════
+
+// 스피너 (회전)
+<div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+
+// 펄스 (깜빡임) - Skeleton에 사용
+<div className="h-4 w-full animate-pulse rounded bg-muted" />
+
+// 바운스 (튀어오름)
+<div className="animate-bounce">↓</div>
+
+// 핑 (확산)
+<span className="relative flex h-3 w-3">
+  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+</span>
+```
+
+**커스텀 Tailwind 애니메이션 (tailwind.config.js):**
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      animation: {
+        // 페이드 인
+        'fade-in': 'fadeIn 0.3s ease-out',
+        // 슬라이드 업
+        'slide-up': 'slideUp 0.3s ease-out',
+        // 슬라이드 다운
+        'slide-down': 'slideDown 0.3s ease-out',
+        // 스케일 인
+        'scale-in': 'scaleIn 0.2s ease-out',
+        // 쉐이크 (에러 표시)
+        shake: 'shake 0.5s ease-in-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        scaleIn: {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-5px)' },
+          '50%': { transform: 'translateX(5px)' },
+          '75%': { transform: 'translateX(-5px)' },
+        },
+      },
+    },
+  },
+};
+```
+
+### 16.5 Framer Motion 기초
+
+**Framer Motion**은 React를 위한 가장 인기 있는 애니메이션 라이브러리입니다.
+
+**설치:**
+
+```bash
+npm install framer-motion
+```
+
+**기본 사용법:**
+
+```tsx
+'use client'
+
+import { motion } from 'framer-motion'
+
+// ═══════════════════════════════════════════════════════════════
+// 기본 애니메이션 (등장)
+// ═══════════════════════════════════════════════════════════════
+
+// 페이드 인
+<motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ duration: 0.3 }}
+>
+  Fade In Content
+</motion.div>
+
+// 슬라이드 + 페이드
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3, ease: 'easeOut' }}
+>
+  Slide Up Content
+</motion.div>
+
+// 스케일 + 페이드
+<motion.div
+  initial={{ opacity: 0, scale: 0.9 }}
+  animate={{ opacity: 1, scale: 1 }}
+  transition={{ duration: 0.2 }}
+>
+  Scale In Content
+</motion.div>
+
+// ═══════════════════════════════════════════════════════════════
+// 호버/탭 인터랙션
+// ═══════════════════════════════════════════════════════════════
+
+<motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+  className="bg-primary text-primary-foreground px-4 py-2 rounded-lg"
+>
+  Interactive Button
+</motion.button>
+
+// ═══════════════════════════════════════════════════════════════
+// Spring 애니메이션 (더 자연스러운 움직임)
+// ═══════════════════════════════════════════════════════════════
+
+<motion.div
+  initial={{ opacity: 0, y: 50 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{
+    type: 'spring',
+    stiffness: 300,   // 스프링 강도 (높을수록 빠름)
+    damping: 20,      // 감쇠 (높을수록 덜 튀어오름)
+  }}
+>
+  Spring Animation
+</motion.div>
+```
+
+### 16.6 AnimatePresence: 퇴장 애니메이션
+
+기본적으로 React는 컴포넌트가 언마운트되면 즉시 사라집니다. **AnimatePresence**를 사용하면 퇴장 애니메이션을 적용할 수 있습니다.
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// ═══════════════════════════════════════════════════════════════
+// 모달 애니메이션
+// ═══════════════════════════════════════════════════════════════
+
+function Modal({ isOpen, onClose, children }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* 배경 오버레이 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={onClose}
+          />
+
+          {/* 모달 컨텐츠 */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{
+              type: 'spring',
+              damping: 25,
+              stiffness: 300,
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-6">{children}</div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 토스트/알림 애니메이션
+// ═══════════════════════════════════════════════════════════════
+
+function Toast({ message, isVisible, onClose }) {
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: 50, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: 50, x: '-50%' }}
+          transition={{ type: 'spring', damping: 25 }}
+          className="fixed bottom-4 left-1/2 bg-foreground text-background px-4 py-2 rounded-lg shadow-lg"
+        >
+          {message}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 드롭다운 메뉴 애니메이션
+// ═══════════════════════════════════════════════════════════════
+
+function Dropdown({ isOpen, children }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10, scaleY: 0.95 }}
+          animate={{ opacity: 1, y: 0, scaleY: 1 }}
+          exit={{ opacity: 0, y: -10, scaleY: 0.95 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          style={{ originY: 0 }} // 위에서부터 확장
+          className="absolute top-full left-0 mt-1 bg-background border rounded-lg shadow-lg py-1 min-w-[200px]"
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+```
+
+### 16.7 리스트 애니메이션
+
+**아이템이 순차적으로 등장하는 애니메이션:**
+
+```tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+// ═══════════════════════════════════════════════════════════════
+// 컨테이너 + 아이템 패턴 (Stagger)
+// ═══════════════════════════════════════════════════════════════
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1, // 각 아이템 사이 0.1초 간격
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      damping: 20,
+    },
+  },
+};
+
+function AnimatedList({ items }) {
+  return (
+    <motion.ul
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-4"
+    >
+      {items.map((item) => (
+        <motion.li key={item.id} variants={itemVariants} className="bg-card p-4 rounded-lg">
+          {item.title}
+        </motion.li>
+      ))}
+    </motion.ul>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 카드 그리드 애니메이션
+// ═══════════════════════════════════════════════════════════════
+
+function AnimatedGrid({ items }) {
+  return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+    >
+      {items.map((item, index) => (
+        <motion.div
+          key={item.id}
+          variants={itemVariants}
+          whileHover={{ y: -4 }}
+          transition={{ type: 'spring', stiffness: 300 }}
+          className="bg-card p-6 rounded-lg shadow-sm hover:shadow-md"
+        >
+          <h3 className="font-semibold">{item.title}</h3>
+          <p className="text-muted-foreground mt-2">{item.description}</p>
+        </motion.div>
+      ))}
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 리스트 아이템 추가/삭제 애니메이션
+// ═══════════════════════════════════════════════════════════════
+
+function AnimatedTodoList({ todos, onDelete }) {
+  return (
+    <AnimatePresence mode="popLayout">
+      {todos.map((todo) => (
+        <motion.div
+          key={todo.id}
+          layout // 위치 변경 시 자동 애니메이션
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ type: 'spring', damping: 20 }}
+          className="flex items-center justify-between p-4 bg-card rounded-lg mb-2"
+        >
+          <span>{todo.text}</span>
+          <button onClick={() => onDelete(todo.id)}>삭제</button>
+        </motion.div>
+      ))}
+    </AnimatePresence>
+  );
+}
+```
+
+### 16.8 페이지 전환 애니메이션 (Next.js App Router)
+
+**Next.js App Router에서 페이지 전환 애니메이션:**
+
+```tsx
+// app/template.tsx
+'use client';
+
+import { motion } from 'framer-motion';
+
+export default function Template({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+```
+
+**더 정교한 페이지 전환:**
+
+```tsx
+// components/PageTransition.tsx
+'use client';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { usePathname } from 'next/navigation';
+
+const pageVariants = {
+  initial: {
+    opacity: 0,
+    y: 20,
+  },
+  enter: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: 'easeOut',
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -20,
+    transition: {
+      duration: 0.2,
+      ease: 'easeIn',
+    },
+  },
+};
+
+export function PageTransition({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={pathname}
+        variants={pageVariants}
+        initial="initial"
+        animate="enter"
+        exit="exit"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+```
+
+### 16.9 마이크로 인터랙션 컴포넌트 라이브러리
+
+```tsx
+'use client';
+
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { Check, Heart, Star, Plus, X } from 'lucide-react';
+
+// ═══════════════════════════════════════════════════════════════
+// 좋아요 버튼 (하트 애니메이션)
+// ═══════════════════════════════════════════════════════════════
+
+export function LikeButton({
+  isLiked: initialLiked = false,
+  onToggle,
+}: {
+  isLiked?: boolean;
+  onToggle?: (liked: boolean) => void;
+}) {
+  const [isLiked, setIsLiked] = useState(initialLiked);
+
+  const handleClick = () => {
+    setIsLiked(!isLiked);
+    onToggle?.(!isLiked);
+  };
+
+  return (
+    <motion.button
+      onClick={handleClick}
+      whileTap={{ scale: 0.9 }}
+      className="p-2 rounded-full hover:bg-muted transition-colors"
+    >
+      <motion.div
+        animate={
+          isLiked
+            ? {
+                scale: [1, 1.3, 1],
+              }
+            : {}
+        }
+        transition={{ duration: 0.3 }}
+      >
+        <Heart
+          className={`h-6 w-6 transition-colors ${
+            isLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+          }`}
+        />
+      </motion.div>
+    </motion.button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 체크박스 애니메이션
+// ═══════════════════════════════════════════════════════════════
+
+export function AnimatedCheckbox({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <motion.button
+      onClick={() => onChange(!checked)}
+      className={`
+        h-6 w-6 rounded border-2 flex items-center justify-center
+        transition-colors
+        ${checked ? 'bg-primary border-primary' : 'border-muted-foreground'}
+      `}
+      whileTap={{ scale: 0.9 }}
+    >
+      <AnimatePresence>
+        {checked && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            transition={{ type: 'spring', damping: 15 }}
+          >
+            <Check className="h-4 w-4 text-primary-foreground" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 토글 스위치
+// ═══════════════════════════════════════════════════════════════
+
+export function AnimatedToggle({
+  enabled,
+  onChange,
+}: {
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+}) {
+  return (
+    <button
+      onClick={() => onChange(!enabled)}
+      className={`
+        relative h-7 w-12 rounded-full p-1 transition-colors
+        ${enabled ? 'bg-primary' : 'bg-muted'}
+      `}
+    >
+      <motion.div
+        className="h-5 w-5 rounded-full bg-white shadow-sm"
+        animate={{ x: enabled ? 20 : 0 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      />
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 별점 컴포넌트
+// ═══════════════════════════════════════════════════════════════
+
+export function StarRating({
+  rating,
+  onChange,
+  max = 5,
+}: {
+  rating: number;
+  onChange?: (rating: number) => void;
+  max?: number;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  return (
+    <div className="flex gap-1">
+      {Array.from({ length: max }).map((_, i) => {
+        const filled = hovered !== null ? i < hovered : i < rating;
+
+        return (
+          <motion.button
+            key={i}
+            onMouseEnter={() => setHovered(i + 1)}
+            onMouseLeave={() => setHovered(null)}
+            onClick={() => onChange?.(i + 1)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <Star
+              className={`h-6 w-6 transition-colors ${
+                filled ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
+              }`}
+            />
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FAB (Floating Action Button) 확장 메뉴
+// ═══════════════════════════════════════════════════════════════
+
+export function ExpandableFab({
+  actions,
+}: {
+  actions: { icon: React.ReactNode; label: string; onClick: () => void }[];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="fixed bottom-6 right-6 flex flex-col-reverse items-center gap-3">
+      {/* 메인 버튼 */}
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center"
+      >
+        <motion.div
+          animate={{ rotate: isOpen ? 45 : 0 }}
+          transition={{ type: 'spring', stiffness: 300 }}
+        >
+          <Plus className="h-6 w-6" />
+        </motion.div>
+      </motion.button>
+
+      {/* 액션 버튼들 */}
+      <AnimatePresence>
+        {isOpen &&
+          actions.map((action, i) => (
+            <motion.button
+              key={action.label}
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
+              transition={{
+                delay: i * 0.05,
+                type: 'spring',
+                damping: 20,
+              }}
+              onClick={() => {
+                action.onClick();
+                setIsOpen(false);
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="h-12 w-12 rounded-full bg-card shadow-md flex items-center justify-center"
+            >
+              {action.icon}
+            </motion.button>
+          ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 성공 체크 애니메이션
+// ═══════════════════════════════════════════════════════════════
+
+export function SuccessCheck() {
+  return (
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: 'spring', damping: 10, stiffness: 100 }}
+      className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center"
+    >
+      <motion.div
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Check className="h-10 w-10 text-green-600" strokeWidth={3} />
+      </motion.div>
+    </motion.div>
+  );
+}
+```
+
+### 16.10 prefers-reduced-motion 지원
+
+**일부 사용자는 애니메이션이 어지러울 수 있습니다.** 시스템 설정을 존중해야 합니다.
+
+```tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+
+// ═══════════════════════════════════════════════════════════════
+// 커스텀 훅
+// ═══════════════════════════════════════════════════════════════
+
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  return prefersReducedMotion;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Framer Motion 내장 훅 사용
+// ═══════════════════════════════════════════════════════════════
+
+function AnimatedComponent() {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: shouldReduceMotion ? 0 : 0.3,
+      }}
+    >
+      Content
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 전역 설정
+// ═══════════════════════════════════════════════════════════════
+
+// globals.css
+/*
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+*/
+```
+
+### 16.11 성능 최적화 팁
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                애니메이션 성능 최적화 가이드                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ✅ GPU 가속 속성 사용 (빠름):                                   │
+│  ─────────────────────────────                                  │
+│  • transform (translate, scale, rotate)                         │
+│  • opacity                                                      │
+│                                                                 │
+│  ❌ 레이아웃 유발 속성 피하기 (느림):                             │
+│  ──────────────────────────────────                             │
+│  • width, height                                                │
+│  • top, left, right, bottom                                     │
+│  • margin, padding                                              │
+│  • font-size                                                    │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  예시:                                                           │
+│                                                                 │
+│  // ❌ 느림 - height 변경                                        │
+│  animate={{ height: isOpen ? 'auto' : 0 }}                      │
+│                                                                 │
+│  // ✅ 빠름 - scaleY 사용                                        │
+│  animate={{ scaleY: isOpen ? 1 : 0 }}                           │
+│  style={{ originY: 0 }}                                         │
+│                                                                 │
+│  // ❌ 느림 - top 변경                                           │
+│  animate={{ top: isOpen ? 0 : -100 }}                           │
+│                                                                 │
+│  // ✅ 빠름 - translateY 사용                                    │
+│  animate={{ y: isOpen ? 0 : -100 }}                             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**will-change 사용 (주의해서):**
+
+```tsx
+// 애니메이션 직전에 힌트 제공
+<motion.div style={{ willChange: 'transform, opacity' }} whileHover={{ scale: 1.05 }}>
+  ...
+</motion.div>
+
+// ⚠️ 주의: will-change를 과도하게 사용하면 오히려 성능 저하
+// 실제로 애니메이션이 적용되는 요소에만 사용
+```
+
+### 16.12 AI에게 애니메이션 요청하는 프롬프트
+
+```markdown
+## 애니메이션 컴포넌트 요청 프롬프트
+
+다음 컴포넌트에 마이크로 인터랙션을 추가해줘: [컴포넌트명]
+
+### 애니메이션 요구사항
+
+**트리거:**
+
+- 호버: [어떤 효과]
+- 클릭: [어떤 효과]
+- 등장: [어떤 효과]
+- 퇴장: [어떤 효과]
+
+**타이밍:**
+
+- Duration: 200-300ms (표준 UI 전환)
+- Easing: ease-out (등장), ease-in (퇴장)
+
+### 필수 요구사항
+
+- Framer Motion 사용
+- prefers-reduced-motion 지원
+- GPU 가속 속성만 사용 (transform, opacity)
+- 과하지 않은 자연스러운 움직임
+
+### 참고 패턴
+
+- 버튼: whileTap={{ scale: 0.95 }}
+- 카드 호버: whileHover={{ y: -4 }}
+- 모달: AnimatePresence + scale + opacity
+
+### 제외할 것
+
+- 과도한 바운스 효과
+- 500ms 이상의 긴 애니메이션
+- 레이아웃 유발 속성 애니메이션
+```
+
+### 16.13 마이크로 인터랙션 체크리스트
+
+```
+□ 기본 인터랙션
+  - [ ] 버튼 호버/클릭 피드백
+  - [ ] 링크 호버 효과
+  - [ ] 카드 호버 효과
+  - [ ] 입력 필드 포커스 효과
+
+□ 상태 전환
+  - [ ] 모달 열기/닫기 애니메이션
+  - [ ] 드롭다운 메뉴 애니메이션
+  - [ ] 토스트 알림 등장/퇴장
+  - [ ] 탭/아코디언 전환
+
+□ 피드백 애니메이션
+  - [ ] 로딩 인디케이터
+  - [ ] 성공 체크 표시
+  - [ ] 에러 쉐이크 효과
+  - [ ] 프로그레스 바
+
+□ 리스트 애니메이션
+  - [ ] 아이템 등장 stagger
+  - [ ] 아이템 추가/삭제
+  - [ ] 재정렬 애니메이션
+
+□ 성능 & 접근성
+  - [ ] GPU 가속 속성만 사용
+  - [ ] prefers-reduced-motion 지원
+  - [ ] 300ms 이하 duration
+  - [ ] 적절한 easing 함수
+```
+
+### 16.14 다음 챕터 미리보기
+
+**챕터 17: 접근성(A11y) 완벽 가이드**에서는 WCAG 2.1 기준, 키보드 네비게이션, 스크린 리더 지원, 색상 대비 등 웹 접근성의 모든 측면을 다룹니다. AI가 자주 놓치는 접근성 문제와 해결 방법을 배웁니다.
 
 ---
 
