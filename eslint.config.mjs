@@ -61,6 +61,16 @@ const eslintConfig = defineConfig([
           "caseInsensitive": true
         }
       }],
+
+      // Accessibility rules (Chapter 15)
+      "jsx-a11y/alt-text": "error",
+      "jsx-a11y/anchor-is-valid": "error",
+      "jsx-a11y/click-events-have-key-events": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/heading-has-content": "error",
+      "jsx-a11y/label-has-associated-control": ["error", {
+        "assert": "either"
+      }],
     },
   },
 ]);

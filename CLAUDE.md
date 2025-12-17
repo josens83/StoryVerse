@@ -88,6 +88,8 @@ src/
 | Toast          | `@/components/ui/toast`           | 알림 메시지                                                          |
 | Loading        | `@/components/ui/loading`         | 로딩 스피너                                                          |
 | OptimizedImage | `@/components/ui/optimized-image` | 최적화된 이미지                                                      |
+| DataContainer  | `@/components/ui/data-container`  | 통합 상태 관리 (로딩/에러/빈/성공)                                   |
+| EmptyState     | `@/components/ui/empty-state`     | 빈 상태 UI (아이콘+제목+설명+CTA)                                    |
 
 ### 레이아웃 컴포넌트
 
@@ -158,10 +160,24 @@ className="w-1/3 md:w-1/2 sm:w-full"
 4. **성공**: 데이터 표시
 
 ```tsx
-// 예시 패턴
+// ✅ DataContainer 사용 (권장)
+import { DataContainer } from '@/components/ui/data-container';
+
+<DataContainer
+  isLoading={isLoading}
+  error={error}
+  isEmpty={!data?.length}
+  emptyMessage="소설이 없습니다"
+  emptyDescription="첫 번째 소설을 작성해보세요"
+  onRetry={refetch}
+>
+  <NovelList novels={data} />
+</DataContainer>;
+
+// 또는 수동 패턴
 if (isLoading) return <Skeleton className="h-32 w-full" />;
 if (error) return <ErrorState message={error.message} onRetry={refetch} />;
-if (!data?.length) return <EmptyState message="소설이 없습니다" />;
+if (!data?.length) return <EmptyState title="소설이 없습니다" />;
 return <NovelList novels={data} />;
 ```
 

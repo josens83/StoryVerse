@@ -354,31 +354,53 @@ export default function AuthorDashboardPage() {
             <h3 className="font-semibold mb-6">작가 설정</h3>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">필명</label>
+                <label
+                  htmlFor="author-pen-name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  필명
+                </label>
                 <input
+                  id="author-pen-name"
                   type="text"
                   defaultValue={author.penName}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">소개</label>
+                <label
+                  htmlFor="author-bio"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  소개
+                </label>
                 <textarea
+                  id="author-bio"
                   rows={4}
                   defaultValue={author.bio}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">정산 계좌</label>
+                <label
+                  htmlFor="author-bank-account"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  정산 계좌
+                </label>
                 <div className="flex gap-2">
-                  <select className="px-4 py-2 border rounded-lg">
+                  <select
+                    id="author-bank"
+                    aria-label="은행 선택"
+                    className="px-4 py-2 border rounded-lg"
+                  >
                     <option>국민은행</option>
                     <option>신한은행</option>
                     <option>우리은행</option>
                     <option>하나은행</option>
                   </select>
                   <input
+                    id="author-bank-account"
                     type="text"
                     placeholder="계좌번호"
                     className="flex-1 px-4 py-2 border rounded-lg"

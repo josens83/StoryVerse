@@ -230,9 +230,12 @@ export function ShareModal({ isOpen, onClose, novelId, title, synopsis }: ShareM
 
           {/* Share URL */}
           <div className="mt-6">
-            <label className="text-sm text-gray-500 mb-2 block">공유 링크</label>
+            <label htmlFor="share-url" className="text-sm text-gray-500 mb-2 block">
+              공유 링크
+            </label>
             <div className="flex items-center gap-2">
               <input
+                id="share-url"
                 type="text"
                 readOnly
                 value={shareUrl}

@@ -28,12 +28,19 @@ import { cn } from '@/lib/utils';
  *   </CardFooter>
  * </Card>
  */
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Enable hover lift effect */
+  interactive?: boolean;
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, interactive = false, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
         'rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900',
+        interactive &&
+          'transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer',
         className
       )}
       {...props}
@@ -52,12 +59,14 @@ CardHeader.displayName = 'CardHeader';
 
 /** Card title heading element */
 const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
+  ({ className, children, ...props }, ref) => (
     <h3
       ref={ref}
       className={cn('text-xl font-semibold leading-none tracking-tight', className)}
       {...props}
-    />
+    >
+      {children}
+    </h3>
   )
 );
 CardTitle.displayName = 'CardTitle';
