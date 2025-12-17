@@ -3454,10 +3454,1320 @@ v0.1.0 - 기본 할 일 관리 (예정: 2024-12-31)
 
 ## 챕터 9: 플랫폼별 설정 가이드
 
-> 작성 예정
+### 9.1 Vercel vs Railway 비교
+
+두 플랫폼 모두 훌륭하지만, **사용 사례에 따라 최적의 선택**이 다릅니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  Vercel vs Railway 비교                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  항목              Vercel              Railway                  │
+│  ────────────────  ─────────────────   ─────────────────        │
+│                                                                 │
+│  최적화 대상       프론트엔드/Next.js   풀스택/백엔드             │
+│                                                                 │
+│  서버리스 함수     ✅ 기본 지원          ✅ 지원                  │
+│                                                                 │
+│  장기 실행 서버    ❌ 제한적             ✅ 완벽 지원             │
+│                                                                 │
+│  DB 호스팅         ❌ 별도 필요          ✅ 내장 PostgreSQL       │
+│                                                                 │
+│  무료 티어         관대함               $5 크레딧/월              │
+│                                                                 │
+│  빌드 시스템       자체 최적화          Nixpacks                 │
+│                                                                 │
+│  엣지 함수         ✅ 강력              ❌ 미지원                 │
+│                                                                 │
+│  프리뷰 배포       ✅ PR마다 자동        ✅ 설정 필요             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  💡 추천:                                                        │
+│  • Next.js 프론트엔드 중심 → Vercel                              │
+│  • 백엔드 API + DB 필요 → Railway                                │
+│  • 둘 다 사용 (프론트: Vercel, 백엔드: Railway)도 좋은 조합      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Part A: Vercel 완벽 가이드
+
+### 9.2 Vercel 프로젝트 구조
+
+```
+프로젝트/
+├── .vercel/                    # vercel link 후 생성 (gitignore)
+│   ├── project.json
+│   └── .env.*.local           # vercel pull로 가져온 환경변수
+│
+├── vercel.json                 # Vercel 설정 파일
+├── next.config.js              # Next.js 설정
+├── package.json
+└── ...
+```
+
+### 9.3 vercel.json 완전 템플릿
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "framework": "nextjs",
+
+  "buildCommand": "prisma generate && next build",
+
+  "installCommand": "npm ci",
+
+  "outputDirectory": ".next",
+
+  "regions": ["icn1"],
+
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+
+  "crons": [
+    {
+      "path": "/api/cron/cleanup",
+      "schedule": "0 0 * * *"
+    }
+  ],
+
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" }
+      ]
+    }
+  ],
+
+  "redirects": [
+    {
+      "source": "/old-page",
+      "destination": "/new-page",
+      "permanent": true
+    }
+  ],
+
+  "rewrites": [
+    {
+      "source": "/blog/:slug",
+      "destination": "/posts/:slug"
+    }
+  ]
+}
+```
+
+**주요 설정 설명:**
+
+| 설정           | 설명                               | 권장값                            |
+| -------------- | ---------------------------------- | --------------------------------- |
+| `framework`    | 프레임워크 자동 감지 오버라이드    | `"nextjs"`                        |
+| `buildCommand` | 빌드 명령어 (Prisma generate 포함) | `"prisma generate && next build"` |
+| `regions`      | 배포 리전                          | `["icn1"]` (서울)                 |
+| `maxDuration`  | 함수 최대 실행 시간 (초)           | Hobby: 60, Pro: 300               |
+| `memory`       | 함수 메모리 (MB)                   | 1024 (기본), 최대 3008            |
+
+### 9.4 Vercel 환경변수 관리
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  Vercel 환경변수 우선순위                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  우선순위 (높음 → 낮음):                                         │
+│                                                                 │
+│  1. Vercel 대시보드 설정                                         │
+│     └── Environment Variables 섹션                              │
+│                                                                 │
+│  2. vercel.json의 env 설정                                       │
+│     └── 비밀값에는 사용 금지! (커밋되므로)                        │
+│                                                                 │
+│  3. .env 파일들 (로컬 개발용)                                    │
+│     └── .gitignore에 포함되어 배포 안 됨                         │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  환경별 변수 설정:                                                │
+│                                                                 │
+│  Production    → 실제 운영 환경                                  │
+│  Preview       → PR 프리뷰 배포                                  │
+│  Development   → vercel dev 로컬 실행                           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**로컬에서 환경변수 동기화:**
+
+```bash
+# Vercel 프로젝트 연결
+vercel link
+
+# 환경변수 가져오기 (Development 환경)
+vercel env pull .env.local
+
+# 특정 환경의 변수 가져오기
+vercel env pull .env.production.local --environment=production
+```
+
+**필수 환경변수 예시:**
+
+```bash
+# .env.local (로컬 개발용 - gitignore)
+
+# Database
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# Auth
+NEXTAUTH_SECRET="your-secret-key"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Third-party APIs
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+```
+
+### 9.5 Vercel Serverless 함수 최적화
+
+**함수별 설정 (App Router):**
+
+```typescript
+// app/api/heavy-task/route.ts
+
+// 함수 설정
+export const maxDuration = 60; // 최대 실행 시간 (초)
+export const dynamic = 'force-dynamic'; // 항상 서버에서 실행
+
+export async function POST(request: Request) {
+  // 무거운 작업 처리
+  const result = await heavyComputation();
+  return Response.json(result);
+}
+```
+
+**타임아웃 설정 가이드:**
+
+| 플랜       | 기본 | 최대  | 설정 방법                       |
+| ---------- | ---- | ----- | ------------------------------- |
+| Hobby      | 10초 | 60초  | `export const maxDuration = 60` |
+| Pro        | 15초 | 300초 | vercel.json 또는 코드에서 설정  |
+| Enterprise | 15초 | 900초 | 동일                            |
+
+**Cold Start 최소화:**
+
+```typescript
+// lib/prisma.ts - 싱글톤 패턴 필수!
+
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+```
+
+### 9.6 Vercel Edge Functions
+
+**일반 Serverless vs Edge 비교:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Serverless vs Edge Functions                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Serverless Functions:                                          │
+│  ─────────────────────                                          │
+│  • Node.js 런타임                                               │
+│  • 모든 npm 패키지 사용 가능                                    │
+│  • Cold start 있음 (~250ms)                                     │
+│  • 특정 리전에서 실행                                           │
+│                                                                 │
+│  Edge Functions:                                                │
+│  ───────────────                                                │
+│  • V8 런타임 (브라우저와 유사)                                   │
+│  • 제한된 API (Node.js API 일부 미지원)                         │
+│  • Cold start 거의 없음 (~0ms)                                  │
+│  • 사용자와 가장 가까운 엣지에서 실행                            │
+│                                                                 │
+│  💡 Edge 적합: 인증 체크, 리다이렉트, A/B 테스트                  │
+│  💡 Serverless 적합: DB 쿼리, 복잡한 로직, 외부 API 호출          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Edge Function 예시:**
+
+```typescript
+// app/api/geo/route.ts
+
+export const runtime = 'edge'; // Edge 런타임 사용
+
+export async function GET(request: Request) {
+  // 사용자 위치 정보 (Edge에서 자동 제공)
+  const country = request.headers.get('x-vercel-ip-country');
+  const city = request.headers.get('x-vercel-ip-city');
+
+  return Response.json({
+    country,
+    city,
+    message: `Hello from ${city}, ${country}!`,
+  });
+}
+```
+
+### 9.7 Vercel + Prisma 최적 설정
+
+**문제:** Vercel의 캐싱으로 인해 Prisma Client가 오래된 버전을 사용할 수 있음
+
+**해결책 1: postinstall 스크립트**
+
+```json
+{
+  "scripts": {
+    "postinstall": "prisma generate",
+    "build": "next build"
+  }
+}
+```
+
+**해결책 2: 빌드 명령어에 포함**
+
+```json
+// vercel.json
+{
+  "buildCommand": "prisma generate && prisma migrate deploy && next build"
+}
+```
+
+**해결책 3: Prisma Accelerate 사용 (권장)**
+
+```prisma
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")      // Accelerate URL
+  directUrl = env("DIRECT_URL")        // 마이그레이션용
+}
+```
+
+---
+
+## Part B: Railway 완벽 가이드
+
+### 9.8 Railway 프로젝트 구조
+
+```
+프로젝트/
+├── railway.json               # Railway 설정 (선택)
+├── railway.toml               # Railway 설정 (대안)
+├── nixpacks.toml              # Nixpacks 빌드 설정 (선택)
+├── Procfile                   # 시작 명령어 (선택)
+├── package.json
+└── ...
+```
+
+### 9.9 railway.json 완전 템플릿
+
+```json
+{
+  "$schema": "https://railway.com/railway.schema.json",
+
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build"
+  },
+
+  "deploy": {
+    "startCommand": "npm run start",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5,
+    "numReplicas": 1
+  }
+}
+```
+
+**주요 설정 설명:**
+
+| 설정                | 설명                | 권장값                 |
+| ------------------- | ------------------- | ---------------------- |
+| `builder`           | 빌드 시스템         | `"NIXPACKS"` (기본)    |
+| `healthcheckPath`   | 헬스체크 엔드포인트 | `"/api/health"`        |
+| `restartPolicyType` | 재시작 정책         | `"ON_FAILURE"`         |
+| `numReplicas`       | 인스턴스 수         | `1` (무료), `2+` (Pro) |
+
+### 9.10 Nixpacks 설정 (Railway 빌드 시스템)
+
+Railway는 **Nixpacks**를 사용하여 자동으로 빌드 환경을 구성합니다. 대부분의 경우 설정 없이 작동하지만, 커스터마이징이 필요할 때 `nixpacks.toml`을 사용합니다.
+
+**nixpacks.toml 완전 템플릿:**
+
+```toml
+# 빌드 환경 설정
+[phases.setup]
+nixPkgs = ["nodejs_20", "npm"]
+aptPkgs = ["openssl", "libssl-dev"]  # Prisma 5+ 필수
+
+# 의존성 설치
+[phases.install]
+cmds = ["npm ci"]
+
+# 빌드 단계
+[phases.build]
+cmds = [
+  "npx prisma generate",
+  "npm run build"
+]
+
+# 시작 명령어
+[start]
+cmd = "npm run start"
+
+# 환경변수
+[variables]
+NODE_ENV = "production"
+```
+
+**Prisma + OpenSSL 문제 해결:**
+
+Prisma 5+는 OpenSSL 3.0이 필요합니다. Railway의 기본 이미지에 없을 수 있습니다.
+
+```toml
+# nixpacks.toml
+
+[phases.setup]
+aptPkgs = ["openssl", "libssl-dev", "ca-certificates"]
+
+[phases.build]
+cmds = [
+  "npx prisma generate",
+  "npm run build"
+]
+```
+
+### 9.11 Railway 환경변수 관리
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                Railway 환경변수 설정                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  설정 위치:                                                      │
+│  ──────────                                                     │
+│  Railway Dashboard → Project → Service → Variables              │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  Railway 내장 변수 (자동 제공):                                  │
+│  ─────────────────────────────                                  │
+│  • RAILWAY_ENVIRONMENT    - 환경 이름 (production, staging)     │
+│  • RAILWAY_SERVICE_NAME   - 서비스 이름                         │
+│  • RAILWAY_PROJECT_ID     - 프로젝트 ID                         │
+│  • PORT                   - 할당된 포트 (필수 사용!)             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  Railway PostgreSQL 연결 (내장 DB 사용 시):                      │
+│  ─────────────────────────────────────────                      │
+│  • DATABASE_URL           - 연결 문자열                         │
+│  • PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE              │
+│                                                                 │
+│  💡 내부 네트워크 URL 사용 권장:                                  │
+│     ${{Postgres.DATABASE_PRIVATE_URL}}                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Railway에서 환경변수 참조 문법:**
+
+```bash
+# 같은 프로젝트의 다른 서비스 참조
+DATABASE_URL="${{Postgres.DATABASE_PRIVATE_URL}}"
+
+# 내부 네트워크 URL (더 빠름, 권장)
+DATABASE_PRIVATE_URL="${{Postgres.DATABASE_PRIVATE_URL}}"
+
+# 외부 접근 URL (로컬 개발용)
+DATABASE_PUBLIC_URL="${{Postgres.DATABASE_PUBLIC_URL}}"
+```
+
+### 9.12 Railway에서 포트 설정 (중요!)
+
+**Railway는 동적으로 포트를 할당합니다.** 하드코딩된 포트(예: 3000)를 사용하면 실패합니다.
+
+```typescript
+// ❌ 잘못된 예시
+const PORT = 3000;
+app.listen(PORT);
+
+// ✅ 올바른 예시
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0'); // 0.0.0.0 바인딩 필수!
+```
+
+**Next.js의 경우 (package.json):**
+
+```json
+{
+  "scripts": {
+    "start": "next start -p $PORT"
+  }
+}
+```
+
+**Express의 경우:**
+
+```typescript
+// server.ts
+import express from 'express';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// 0.0.0.0에 바인딩 (Railway 필수)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
+```
+
+### 9.13 Railway Health Check 설정
+
+Railway는 헬스체크를 통해 서비스 상태를 모니터링합니다.
+
+**헬스체크 엔드포인트 구현:**
+
+```typescript
+// app/api/health/route.ts (Next.js App Router)
+
+import { prisma } from '@/lib/prisma';
+
+export async function GET() {
+  try {
+    // DB 연결 확인
+    await prisma.$queryRaw`SELECT 1`;
+
+    return Response.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 503 }
+    );
+  }
+}
+```
+
+**railway.json에서 헬스체크 설정:**
+
+```json
+{
+  "deploy": {
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 300
+  }
+}
+```
+
+### 9.14 Railway + Prisma 최적 설정
+
+**package.json:**
+
+```json
+{
+  "scripts": {
+    "postinstall": "prisma generate",
+    "build": "next build",
+    "start": "next start -p $PORT",
+    "db:migrate:deploy": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0"
+  }
+}
+```
+
+**railway.json:**
+
+```json
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm run db:migrate:deploy && npm run start",
+    "healthcheckPath": "/api/health"
+  }
+}
+```
+
+**Prisma 스키마 (Railway PostgreSQL용):**
+
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+```
+
+### 9.15 Railway 내장 PostgreSQL 설정
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Railway PostgreSQL 설정 단계                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 서비스 추가                                                  │
+│     Dashboard → New → Database → PostgreSQL                     │
+│                                                                 │
+│  2. 환경변수 연결                                                │
+│     앱 서비스 → Variables → Add Reference Variable              │
+│     DATABASE_URL = ${{Postgres.DATABASE_PRIVATE_URL}}           │
+│                                                                 │
+│  3. 마이그레이션 실행                                            │
+│     Railway CLI 또는 Deploy hook에서 실행                       │
+│                                                                 │
+│  4. 백업 설정 (Pro 플랜)                                         │
+│     Database → Settings → Backups → Enable                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Part C: 공통 설정 및 비교
+
+### 9.16 package.json 통합 템플릿
+
+Vercel과 Railway 모두에서 작동하는 설정:
+
+```json
+{
+  "name": "my-fullstack-app",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
+    "postinstall": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "verify": "npm run typecheck && npm run lint && npm run build"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0",
+    "next": "^14.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+```
+
+### 9.17 플랫폼별 배포 명령어
+
+```bash
+# ─────────────────────────────────────────────────────────
+# Vercel
+# ─────────────────────────────────────────────────────────
+
+# CLI 설치
+npm install -g vercel
+
+# 프로젝트 연결
+vercel link
+
+# 환경변수 가져오기
+vercel pull
+
+# 로컬에서 프로덕션 빌드 테스트
+vercel build
+
+# 프리뷰 배포
+vercel
+
+# 프로덕션 배포
+vercel --prod
+
+# ─────────────────────────────────────────────────────────
+# Railway
+# ─────────────────────────────────────────────────────────
+
+# CLI 설치
+npm install -g @railway/cli
+
+# 로그인
+railway login
+
+# 프로젝트 연결
+railway link
+
+# 로컬에서 Railway 환경으로 실행
+railway run npm run dev
+
+# 배포
+railway up
+
+# 로그 확인
+railway logs
+```
+
+### 9.18 트러블슈팅 가이드
+
+**Vercel 흔한 오류:**
+
+| 오류                              | 원인                    | 해결                                |
+| --------------------------------- | ----------------------- | ----------------------------------- |
+| `FUNCTION_INVOCATION_TIMEOUT`     | 함수 실행 시간 초과     | `maxDuration` 증가 또는 로직 최적화 |
+| `EDGE_FUNCTION_INVOCATION_FAILED` | Edge 런타임 호환성 문제 | Node.js API 사용 확인, runtime 변경 |
+| `BUILD_FAILED: prisma generate`   | Prisma Client 생성 실패 | `postinstall` 스크립트 확인         |
+| `504 Gateway Timeout`             | 서버리스 함수 타임아웃  | DB 쿼리 최적화, Connection Pooling  |
+
+**Railway 흔한 오류:**
+
+| 오류                            | 원인             | 해결                                      |
+| ------------------------------- | ---------------- | ----------------------------------------- |
+| `Application failed to respond` | 포트 바인딩 문제 | `process.env.PORT` 사용, `0.0.0.0` 바인딩 |
+| `Build failed: openssl`         | OpenSSL 누락     | `nixpacks.toml`에 aptPkgs 추가            |
+| `Connection refused`            | DB 연결 실패     | 환경변수 확인, Private URL 사용           |
+| `Health check failed`           | 헬스체크 실패    | `/api/health` 엔드포인트 구현             |
+
+### 9.19 플랫폼별 설정 체크리스트
+
+**Vercel 체크리스트:**
+
+```
+□ vercel link로 프로젝트 연결
+□ vercel pull로 환경변수 동기화
+□ vercel.json 설정 (필요시)
+□ postinstall에 prisma generate 추가
+□ 환경변수 대시보드에 설정
+  - DATABASE_URL
+  - DIRECT_URL (마이그레이션용)
+  - 기타 API 키들
+□ vercel build로 로컬 테스트
+□ vercel --prod로 프로덕션 배포
+```
+
+**Railway 체크리스트:**
+
+```
+□ railway link로 프로젝트 연결
+□ PostgreSQL 서비스 추가 (필요시)
+□ 환경변수 설정
+  - DATABASE_URL = ${{Postgres.DATABASE_PRIVATE_URL}}
+  - 기타 필요한 변수들
+□ package.json start 스크립트에 $PORT 사용
+□ 0.0.0.0 바인딩 확인
+□ /api/health 엔드포인트 구현
+□ nixpacks.toml 설정 (필요시)
+□ railway up으로 배포
+□ railway logs로 로그 확인
+```
+
+### 9.20 다음 챕터 미리보기
+
+**챕터 10: 즉시 실행 가능한 액션 플랜**에서는 지금까지 배운 모든 내용을 정리하고, 오늘부터 바로 적용할 수 있는 체크리스트와 템플릿 모음을 제공합니다.
 
 ---
 
 ## 챕터 10: 즉시 실행 가능한 액션 플랜
 
-> 작성 예정
+### 10.1 이 가이드의 핵심 요약
+
+지금까지 배운 내용을 한 장으로 정리합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│            솔로 개발자 워크플로우 개선 핵심 요약                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  문제 1: 배포 오류 반복                                          │
+│  ─────────────────────                                          │
+│  원인: 로컬 ≠ 클라우드 환경 차이                                 │
+│  해결: 환경 일치 + 사전 검증 + 자동화                            │
+│  핵심 도구: Vercel CLI, GitHub Actions, Husky                   │
+│                                                                 │
+│  문제 2: AI 도구 컨텍스트 한계                                   │
+│  ───────────────────────────                                    │
+│  원인: 컨텍스트 윈도우의 구조적 제한                             │
+│  해결: CLAUDE.md + 1태스크=1세션 + 지식 보존                     │
+│  핵심 도구: CLAUDE.md, 세션 노트, 효과적인 프롬프트              │
+│                                                                 │
+│  문제 3: 프로젝트 비전 이탈                                      │
+│  ─────────────────────────                                      │
+│  원인: 기록 없는 의사결정 + 정기 점검 부재                       │
+│  해결: 비전 문서 + ADR + 주간/월간 점검                          │
+│  핵심 도구: VISION.md, ADR, Kanban, 점검 루틴                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 10.2 우선순위별 액션 플랜
+
+**모든 것을 한 번에 하려고 하지 마세요.** 가장 큰 고통점부터 해결합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    3단계 도입 로드맵                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  🔴 1단계: 오늘 당장 (30분)                                      │
+│  ─────────────────────────                                      │
+│  □ tsconfig.json에 forceConsistentCasingInFileNames 추가        │
+│  □ package.json에 postinstall: "prisma generate" 추가           │
+│  □ CLAUDE.md 파일 생성 (기본 템플릿)                             │
+│  □ README.md에 비전 섹션 추가                                   │
+│                                                                 │
+│  🟡 2단계: 이번 주 안에 (2-3시간)                                │
+│  ────────────────────────────                                   │
+│  □ Vercel/Railway CLI 설치 및 프로젝트 연결                     │
+│  □ GitHub Actions CI 파이프라인 설정                            │
+│  □ Husky + lint-staged 설치                                     │
+│  □ 첫 번째 ADR 작성                                             │
+│  □ Kanban 보드 설정 (GitHub Projects)                           │
+│                                                                 │
+│  🟢 3단계: 습관화 (매주/매월)                                    │
+│  ───────────────────────────                                    │
+│  □ 배포 전 vercel build / nixpacks build 실행                   │
+│  □ AI 세션 종료 전 지식 보존                                    │
+│  □ 주간 15분 점검                                               │
+│  □ 월간 1시간 점검                                              │
+│  □ 새 기능 전 정렬 체크리스트 확인                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 10.3 복사해서 바로 쓰는 템플릿 모음
+
+#### 템플릿 1: tsconfig.json (Next.js + Vercel)
+
+```json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "incremental": true,
+    "jsx": "preserve",
+    "noEmit": true,
+    "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+#### 템플릿 2: package.json (Next.js + Prisma)
+
+```json
+{
+  "name": "my-app",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
+    "postinstall": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write .",
+    "verify": "npm run typecheck && npm run lint && npm run build",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0",
+    "next": "^14.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "engines": { "node": ">=18.0.0" }
+}
+```
+
+#### 템플릿 3: .lintstagedrc.js
+
+```javascript
+module.exports = {
+  '*.{ts,tsx}': [() => 'tsc --noEmit', 'eslint --fix --max-warnings=0', 'prettier --write'],
+  '*.prisma': ['npx prisma format', 'npx prisma validate'],
+  '*.{js,jsx,json,md,css}': ['prettier --write'],
+};
+```
+
+#### 템플릿 4: GitHub Actions CI (.github/workflows/ci.yml)
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma validate
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+```
+
+#### 템플릿 5: CLAUDE.md
+
+```markdown
+# Project: [프로젝트명]
+
+## 기술 스택
+
+- Framework: Next.js 14 (App Router)
+- Language: TypeScript (strict mode)
+- Database: PostgreSQL + Prisma ORM
+- Styling: Tailwind CSS
+- Deployment: Vercel / Railway
+
+## 프로젝트 구조
+
+src/
+├── app/ # 페이지 및 API 라우트
+├── components/ # React 컴포넌트
+├── lib/ # 유틸리티, DB 클라이언트
+└── types/ # TypeScript 타입
+
+## 명령어
+
+- npm run dev # 개발 서버
+- npm run build # 프로덕션 빌드
+- npm run verify # 타입체크 + 린트 + 빌드
+
+## 코딩 컨벤션
+
+- 함수형 컴포넌트 + Hooks
+- 절대 경로 import (@/)
+- 세미콜론 생략
+
+## 현재 작업
+
+[현재 집중하고 있는 기능]
+
+## 주의사항
+
+- Prisma 스키마 변경 후 prisma generate 필수
+- 배포 전 npm run verify 실행
+```
+
+#### 템플릿 6: VISION.md
+
+```markdown
+# 프로젝트 비전
+
+## 한 줄 정의
+
+[이 프로젝트를 한 문장으로]
+
+## 대상 사용자
+
+[누구를 위한 것인가]
+
+## 해결하는 문제
+
+[어떤 고통점을 해결하는가]
+
+## 핵심 가치 (최대 3개)
+
+1.
+2.
+3.
+
+## 핵심 기능 (MVP)
+
+- [ ] 기능 1
+- [ ] 기능 2
+- [ ] 기능 3
+
+## 🚫 목표 NOT
+
+- [명시적으로 하지 않을 것 1]
+- [명시적으로 하지 않을 것 2]
+- [명시적으로 하지 않을 것 3]
+
+## 성공 지표
+
+- [측정 가능한 지표]
+```
+
+#### 템플릿 7: ADR (docs/adr/template.md)
+
+```markdown
+# ADR [번호]: [결정 제목]
+
+## 상태
+
+[Proposed | Accepted | Deprecated]
+
+## 날짜
+
+[YYYY-MM-DD]
+
+## 맥락
+
+[이 결정이 필요한 배경]
+
+## 고려한 옵션들
+
+### 옵션 1: [이름]
+
+- 장점:
+- 단점:
+
+### 옵션 2: [이름]
+
+- 장점:
+- 단점:
+
+## 결정
+
+[선택한 옵션과 그 이유]
+
+## 결과
+
+- 긍정적:
+- 부정적:
+```
+
+#### 템플릿 8: 주간 점검 (docs/reviews/weekly-template.md)
+
+```markdown
+# 주간 점검 - [YYYY-MM-DD]
+
+## 이번 주 완료
+
+- [x]
+- [x]
+- [ ] (미완료 - 이유: )
+
+## 비전 정렬 체크
+
+- [ ] 모든 작업이 프로젝트 비전과 일치함
+
+## 다음 주 우선순위 (최대 3개)
+
+1.
+2.
+3.
+
+## 막힌 점 / 기술 부채
+
+-
+
+## 메모
+
+-
+```
+
+#### 템플릿 9: Prisma 싱글톤 (lib/prisma.ts)
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
+export default prisma;
+```
+
+#### 템플릿 10: Health Check API (app/api/health/route.ts)
+
+```typescript
+import { prisma } from '@/lib/prisma';
+
+export async function GET() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return Response.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown',
+      },
+      { status: 503 }
+    );
+  }
+}
+```
+
+---
+
+### 10.4 빠른 참조 체크리스트
+
+#### 배포 전 체크리스트
+
+```
+□ npm run verify 통과 (typecheck + lint + build)
+□ vercel build 또는 로컬 프로덕션 빌드 성공
+□ 환경변수 모두 설정됨
+□ Prisma 스키마 변경 시 migration 준비됨
+□ package.json engines.node 버전 명시됨
+□ postinstall에 prisma generate 포함됨
+```
+
+#### 새 기능 시작 전 체크리스트
+
+```
+□ 프로젝트 비전과 일치하는가?
+□ "목표 NOT" 목록에 해당하지 않는가?
+□ 사용자 스토리로 설명할 수 있는가?
+□ MVP 범위가 정의되었는가?
+□ 성공 기준이 명확한가?
+```
+
+#### AI 세션 관리 체크리스트
+
+```
+□ CLAUDE.md가 최신 상태인가?
+□ 1 태스크 = 1 세션 원칙 준수
+□ 세션 종료 전 지식 보존 요청
+□ 프롬프트에 파일 경로 명시
+□ Explore → Plan → Code → Commit 워크플로우 적용
+```
+
+---
+
+### 10.5 문제별 즉시 해결 가이드
+
+#### TypeScript 오류
+
+| 오류                           | 즉시 해결                                       |
+| ------------------------------ | ----------------------------------------------- |
+| `File name differs in casing`  | import 경로 대소문자를 실제 파일명과 일치시키기 |
+| `Cannot find module`           | 경로 확인, @types 패키지 설치                   |
+| `Object is possibly null`      | `?.` 옵셔널 체이닝 또는 null 체크 추가          |
+| `Parameter implicitly has any` | 타입 명시: `(param: Type) => ...`               |
+
+#### Prisma 오류
+
+| 오류                                  | 즉시 해결                                           |
+| ------------------------------------- | --------------------------------------------------- |
+| `Cannot find module '@prisma/client'` | `npx prisma generate` 실행, postinstall 확인        |
+| `Unable to locate Query Engine`       | `engineType: "client"` 추가 또는 binaryTargets 설정 |
+| `Too many connections`                | Connection Pooling URL 사용, 싱글톤 패턴 확인       |
+| `P1001: Can't reach database`         | DATABASE_URL 환경변수 확인                          |
+
+#### 배포 오류
+
+| 오류                                    | 즉시 해결                                 |
+| --------------------------------------- | ----------------------------------------- |
+| Vercel `BUILD_FAILED`                   | `vercel build` 로컬 실행으로 원인 파악    |
+| Railway `Application failed to respond` | `process.env.PORT` 사용, `0.0.0.0` 바인딩 |
+| `FUNCTION_INVOCATION_TIMEOUT`           | `maxDuration` 증가 또는 로직 최적화       |
+
+---
+
+### 10.6 추천 도구 요약표
+
+| 영역                | 핵심 도구            | 대안                |
+| ------------------- | -------------------- | ------------------- |
+| **로컬 빌드 검증**  | Vercel CLI, Nixpacks | Docker              |
+| **CI/CD**           | GitHub Actions       | GitLab CI           |
+| **커밋 검증**       | Husky + lint-staged  | pre-commit          |
+| **AI 컨텍스트**     | CLAUDE.md            | .cursorrules        |
+| **아키텍처 문서**   | Mermaid, ADR         | Structurizr         |
+| **태스크 관리**     | GitHub Projects      | Notion, Linear      |
+| **DB ORM**          | Prisma               | Drizzle, TypeORM    |
+| **배포 (Frontend)** | Vercel               | Netlify, Cloudflare |
+| **배포 (Backend)**  | Railway              | Render, Fly.io      |
+
+---
+
+### 10.7 최종 점검: 당신의 워크플로우 성숙도
+
+각 항목에 체크하고 점수를 계산해보세요.
+
+```
+배포 안정성 (각 2점, 총 10점)
+─────────────────────────────
+□ tsconfig.json에 forceConsistentCasingInFileNames 설정됨
+□ package.json에 postinstall: "prisma generate" 있음
+□ GitHub Actions CI 파이프라인 구축됨
+□ Husky pre-commit hook 설정됨
+□ 배포 전 로컬 빌드 테스트 습관화
+
+AI 도구 활용 (각 2점, 총 10점)
+─────────────────────────────
+□ CLAUDE.md (또는 동등한 컨텍스트 파일) 존재함
+□ 1 태스크 = 1 세션 원칙 실천 중
+□ 세션 종료 전 지식 보존 습관화
+□ 구체적인 프롬프트 작성 습관화
+□ Explore → Plan → Code 워크플로우 적용
+
+프로젝트 관리 (각 2점, 총 10점)
+─────────────────────────────
+□ 비전 문서 (README 또는 VISION.md) 존재함
+□ "목표 NOT" 섹션 정의됨
+□ ADR 최소 1개 이상 작성됨
+□ Kanban 보드 사용 중
+□ 주간/월간 점검 루틴 실천 중
+
+──────────────────────────────
+총점: ___ / 30점
+
+해석:
+• 25-30점: 🏆 마스터 - 체계적인 워크플로우 구축 완료
+• 15-24점: 🌟 중급 - 기본기 갖춤, 일부 개선 필요
+• 8-14점:  📈 초급 - 핵심 요소 도입 시작 권장
+• 0-7점:   🚀 시작 - 이 가이드의 1단계부터 시작!
+```
+
+---
+
+### 10.8 마무리: 작은 개선의 힘
+
+**완벽한 워크플로우는 없습니다.** 중요한 것은 **지속적인 개선**입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     기억해야 할 것들                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 한 번에 모든 것을 바꾸려 하지 마세요                         │
+│     → 가장 큰 고통점 하나부터 해결                               │
+│                                                                 │
+│  2. 자동화는 투자입니다                                          │
+│     → 처음 30분 투자가 앞으로 수십 시간을 절약                   │
+│                                                                 │
+│  3. 문서화는 미래의 나를 위한 것입니다                           │
+│     → 3개월 후의 내가 고마워할 것                                │
+│                                                                 │
+│  4. 실패를 빨리 발견할수록 비용이 줄어듭니다                     │
+│     → 커밋 시점 > CI > 배포 후                                   │
+│                                                                 │
+│  5. AI 도구는 보조 수단입니다                                    │
+│     → 컨텍스트를 잘 전달하면 10배 효과                           │
+│                                                                 │
+│  6. 비전을 잃지 마세요                                           │
+│     → 정기적인 점검이 방향을 유지해줍니다                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 10.9 다음 단계 추천
+
+이 가이드를 완료했다면, 다음 단계로 고려해볼 것들:
+
+1. **테스트 자동화** - Jest, Vitest, Playwright
+2. **모니터링** - Sentry, LogRocket, Vercel Analytics
+3. **성능 최적화** - Lighthouse CI, Bundle Analyzer
+4. **인프라 코드화** - Terraform, Pulumi
+5. **더 나은 타입 안전성** - Zod, tRPC
+
+---
+
+## 축하합니다!
+
+10개 챕터를 모두 완료했습니다.
+
+**오늘 바로 시작하세요:**
+
+1. `tsconfig.json`에 `forceConsistentCasingInFileNames: true` 추가
+2. `package.json`에 `postinstall: "prisma generate"` 추가
+3. `CLAUDE.md` 파일 생성
+
+작은 첫 걸음이 큰 변화를 만듭니다. 화이팅!
