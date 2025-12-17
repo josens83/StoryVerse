@@ -449,3 +449,145 @@ export interface CommentReaction {
   type: 'like' | 'dislike';
   createdAt: Date;
 }
+
+// ========================================
+// Phase 2: Recommendation & Social Types
+// ========================================
+
+// Recommendation Types
+export type RecommendationReason =
+  | 'similar_genre'
+  | 'same_author'
+  | 'readers_also_liked'
+  | 'trending'
+  | 'personalized'
+  | 'new_release'
+  | 'editorial_pick';
+
+export interface Recommendation {
+  id: string;
+  novelId: string;
+  novel?: Novel;
+  reason: RecommendationReason;
+  score: number;
+  createdAt: Date;
+}
+
+export interface PersonalizedFeed {
+  forYou: Recommendation[];
+  continueReading: ReadingHistory[];
+  newFromFollowing: Novel[];
+  trending: Novel[];
+  newReleases: Novel[];
+}
+
+// Notification Types
+export type NotificationType =
+  | 'chapter_update'
+  | 'author_new_work'
+  | 'comment_reply'
+  | 'comment_like'
+  | 'follow'
+  | 'achievement'
+  | 'system'
+  | 'event'
+  | 'coin_received';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  imageUrl?: string;
+  linkUrl?: string;
+  novelId?: string;
+  chapterId?: string;
+  authorId?: string;
+  isRead: boolean;
+  createdAt: Date;
+}
+
+export interface NotificationPreferences {
+  userId: string;
+  chapterUpdates: boolean;
+  authorNewWorks: boolean;
+  commentReplies: boolean;
+  commentLikes: boolean;
+  follows: boolean;
+  achievements: boolean;
+  systemNotices: boolean;
+  events: boolean;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+}
+
+// Social/Follow Types
+export interface Follow {
+  id: string;
+  followerId: string;
+  follower?: User;
+  followingId: string;
+  following?: User | Author;
+  followType: 'user' | 'author';
+  createdAt: Date;
+}
+
+export interface UserProfile {
+  user: User;
+  followerCount: number;
+  followingCount: number;
+  isFollowing?: boolean;
+  readingStats: {
+    totalNovelsRead: number;
+    totalChaptersRead: number;
+    totalReadTime: number;
+    favoriteGenres: Genre[];
+  };
+  recentActivity: {
+    type: 'read' | 'comment' | 'like' | 'follow';
+    novelId?: string;
+    novel?: Novel;
+    createdAt: Date;
+  }[];
+}
+
+// Share Types
+export type SharePlatform = 'kakao' | 'twitter' | 'facebook' | 'link' | 'qr';
+
+export interface ShareData {
+  novelId: string;
+  title: string;
+  synopsis: string;
+  coverUrl: string;
+  shareUrl: string;
+  platform: SharePlatform;
+}
+
+// Reading Challenge Types
+export interface ReadingChallenge {
+  id: string;
+  title: string;
+  description: string;
+  targetCount: number;
+  currentCount: number;
+  rewardCoins: number;
+  startDate: Date;
+  endDate: Date;
+  isCompleted: boolean;
+}
+
+// Activity Feed Types
+export interface ActivityItem {
+  id: string;
+  userId: string;
+  user?: User;
+  type: 'read' | 'comment' | 'like' | 'follow' | 'achievement' | 'tip';
+  novelId?: string;
+  novel?: Novel;
+  chapterId?: string;
+  targetUserId?: string;
+  targetUser?: User;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+}
