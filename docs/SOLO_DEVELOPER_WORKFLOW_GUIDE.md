@@ -1246,13 +1246,1081 @@ generator client {
 
 ## 챕터 5: CI/CD 파이프라인 구축
 
-> 작성 예정
+### 5.1 왜 CI/CD가 솔로 개발자에게 중요한가
+
+팀에서는 동료가 코드 리뷰를 해주지만, 혼자 개발할 때는 **자동화된 검증 시스템**이 그 역할을 대신해야 합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                CI/CD 없이 vs CI/CD 있을 때                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  CI/CD 없이:                                                    │
+│  ───────────                                                    │
+│                                                                 │
+│  코드 작성 → git push → Vercel 배포 → 오류 발견! → 수정        │
+│                                          │                      │
+│                                          └─→ 또 오류! → 수정    │
+│                                                   │             │
+│                                                   └─→ 또 오류!  │
+│  소요 시간: 30분 ~ 2시간 (반복 횟수에 따라)                      │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  CI/CD 있을 때:                                                 │
+│  ──────────────                                                 │
+│                                                                 │
+│  코드 작성 → git push → GitHub Actions 검증                     │
+│                              │                                  │
+│                              ├─→ ✅ 통과 → Vercel 배포 → 성공!  │
+│                              │                                  │
+│                              └─→ ❌ 실패 → 즉시 알림            │
+│                                      │                          │
+│                                      └─→ 로컬에서 수정 후 재푸시 │
+│                                                                 │
+│  소요 시간: 5~10분 (대부분 첫 시도에 성공)                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 GitHub Actions 기본 구조 이해
+
+```yaml
+# .github/workflows/ci.yml
+
+name: CI # 워크플로우 이름
+
+on: # 트리거 조건
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs: # 실행할 작업들
+  build: # 작업 이름
+    runs-on: ubuntu-latest # 실행 환경
+
+    steps: # 단계별 실행
+      - uses: actions/checkout@v4 # 코드 체크아웃
+      - run: npm ci # 명령어 실행
+```
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                GitHub Actions 실행 흐름                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  git push                                                       │
+│      │                                                          │
+│      ▼                                                          │
+│  GitHub이 .github/workflows/*.yml 파일 감지                     │
+│      │                                                          │
+│      ▼                                                          │
+│  Runner 머신 할당 (ubuntu-latest)                               │
+│      │                                                          │
+│      ▼                                                          │
+│  ┌─────────────────────────────────────┐                        │
+│  │ Step 1: actions/checkout            │ 코드 다운로드          │
+│  │ Step 2: actions/setup-node          │ Node.js 설치           │
+│  │ Step 3: npm ci                      │ 의존성 설치            │
+│  │ Step 4: npm run typecheck           │ 타입 검사              │
+│  │ Step 5: npm run lint                │ 린트 검사              │
+│  │ Step 6: npm run build               │ 빌드 테스트            │
+│  └─────────────────────────────────────┘                        │
+│      │                                                          │
+│      ▼                                                          │
+│  ✅ 모든 Step 성공 → 워크플로우 성공                             │
+│  ❌ 하나라도 실패 → 워크플로우 실패 + 알림                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 5.3 TypeScript + Prisma 검증 파이프라인 (기본)
+
+**`.github/workflows/ci.yml`:**
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: 코드 검증
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      # 2. Node.js 설정 (캐싱 포함)
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. 의존성 설치
+      - name: 의존성 설치
+        run: npm ci
+
+      # 4. Prisma Client 생성
+      - name: Prisma 생성
+        run: npx prisma generate
+
+      # 5. TypeScript 타입 체크
+      - name: 타입 체크
+        run: npx tsc --noEmit
+
+      # 6. ESLint 검사
+      - name: 린트 검사
+        run: npm run lint
+
+      # 7. 빌드 테스트
+      - name: 빌드
+        run: npm run build
+```
+
+### 5.4 고급 파이프라인: 캐싱 + 병렬 실행
+
+속도를 높이기 위해 **Prisma 캐싱**과 **작업 병렬화**를 적용합니다.
+
+```yaml
+name: CI (Advanced)
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # 의존성 설치 (다른 작업들이 재사용)
+  # ─────────────────────────────────────────────────────────────
+  install:
+    name: 📦 의존성 설치
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Prisma Client 캐싱
+      - name: Prisma 캐시
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.prisma
+          key: prisma-${{ hashFiles('prisma/schema.prisma') }}
+          restore-keys: |
+            prisma-
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      # node_modules를 아티팩트로 저장
+      - uses: actions/upload-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────
+  # 타입 체크 (병렬)
+  # ─────────────────────────────────────────────────────────────
+  typecheck:
+    name: 🔍 타입 체크
+    needs: install
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - run: npx tsc --noEmit
+
+  # ─────────────────────────────────────────────────────────────
+  # 린트 검사 (병렬)
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: 📋 린트 검사
+    needs: install
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - run: npm run lint
+
+  # ─────────────────────────────────────────────────────────────
+  # Prisma 스키마 검증 (병렬)
+  # ─────────────────────────────────────────────────────────────
+  prisma:
+    name: 🗄️ Prisma 검증
+    needs: install
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - name: Prisma 스키마 검증
+        run: npx prisma validate
+
+      - name: Prisma 포맷 검사
+        run: |
+          npx prisma format
+          git diff --exit-code prisma/schema.prisma || \
+            (echo "❌ Prisma 스키마 포맷이 필요합니다: npx prisma format" && exit 1)
+
+  # ─────────────────────────────────────────────────────────────
+  # 빌드 테스트 (typecheck, lint, prisma 모두 통과 후)
+  # ─────────────────────────────────────────────────────────────
+  build:
+    name: 🏗️ 빌드
+    needs: [typecheck, lint, prisma]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+      - run: npm run build
+
+      - name: 빌드 결과물 저장
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            .next
+            out
+          retention-days: 7
+```
+
+**실행 흐름:**
+
+```
+┌──────────┐
+│ install  │
+└────┬─────┘
+     │
+     ├──────────────┬──────────────┐
+     ▼              ▼              ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│typecheck │  │   lint   │  │  prisma  │  ← 병렬 실행
+└────┬─────┘  └────┬─────┘  └────┬─────┘
+     │              │              │
+     └──────────────┴──────────────┘
+                    │
+                    ▼
+              ┌──────────┐
+              │  build   │  ← 모두 통과 후 실행
+              └──────────┘
+```
+
+### 5.5 데이터베이스 통합 테스트 파이프라인
+
+실제 DB와 연동하는 테스트가 필요한 경우:
+
+```yaml
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration:
+    name: 🧪 통합 테스트
+    runs-on: ubuntu-latest
+
+    # PostgreSQL 서비스 컨테이너
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      # DB 스키마 적용
+      - name: DB 마이그레이션
+        run: npx prisma db push --skip-generate
+
+      # 시드 데이터 (선택)
+      - name: 시드 데이터 삽입
+        run: npx prisma db seed
+        continue-on-error: true
+
+      # 통합 테스트 실행
+      - name: 테스트 실행
+        run: npm run test:integration
+```
+
+### 5.6 자동 배포 파이프라인 (Vercel)
+
+테스트 통과 후 자동으로 Vercel에 배포:
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: 검증
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+  deploy:
+    name: 🚀 Vercel 배포
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Vercel CLI 설치
+        run: npm install -g vercel
+
+      - name: Vercel 환경 가져오기
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Vercel 빌드
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Vercel 배포
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      # DB 마이그레이션 (배포 후)
+      - name: DB 마이그레이션 실행
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+```
+
+**필요한 GitHub Secrets:**
+
+```
+VERCEL_TOKEN      - Vercel 액세스 토큰
+VERCEL_ORG_ID     - Vercel 조직 ID
+VERCEL_PROJECT_ID - Vercel 프로젝트 ID
+DATABASE_URL      - 프로덕션 DB URL
+```
+
+### 5.7 Railway 배포 파이프라인
+
+```yaml
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    # ... (위와 동일)
+
+  deploy:
+    name: 🚂 Railway 배포
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Railway CLI 설치
+        run: npm install -g @railway/cli
+
+      - name: Railway 배포
+        run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+```
+
+### 5.8 PR 미리보기 배포
+
+Pull Request마다 미리보기 환경을 자동 생성:
+
+```yaml
+name: Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  preview:
+    name: 🔍 미리보기 배포
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Vercel 미리보기 배포
+        id: deploy
+        run: |
+          npm install -g vercel
+          url=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+      # PR에 댓글로 미리보기 URL 추가
+      - name: PR 댓글 추가
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 미리보기 배포 완료!\n\n**URL:** ${{ steps.deploy.outputs.url }}`
+            })
+```
+
+### 5.9 워크플로우 상태 배지
+
+README.md에 CI 상태 배지 추가:
+
+```markdown
+# My Project
+
+![CI](https://github.com/USERNAME/REPO/actions/workflows/ci.yml/badge.svg)
+![Deploy](https://github.com/USERNAME/REPO/actions/workflows/deploy.yml/badge.svg)
+
+프로젝트 설명...
+```
+
+### 5.10 실패 알림 설정
+
+Slack이나 Discord로 실패 알림 받기:
+
+```yaml
+# 워크플로우 마지막에 추가
+
+notify:
+  name: 📢 알림
+  needs: [build]
+  if: failure()
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: Discord 알림
+      uses: sarisia/actions-status-discord@v1
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK }}
+        status: failure
+        title: 'CI 실패'
+        description: |
+          브랜치: ${{ github.ref_name }}
+          커밋: ${{ github.sha }}
+        color: 0xff0000
+```
+
+### 5.11 CI/CD 도입 체크리스트
+
+```
+□ .github/workflows/ 폴더 생성
+□ ci.yml 파일 작성
+□ package.json에 필요한 스크립트 추가
+  - typecheck: "tsc --noEmit"
+  - lint: "next lint" 또는 "eslint ."
+  - build: "next build"
+□ GitHub Secrets 설정 (배포용)
+  - VERCEL_TOKEN
+  - DATABASE_URL
+□ 첫 번째 푸시로 워크플로우 테스트
+□ README.md에 상태 배지 추가
+□ 실패 알림 설정 (선택)
+```
+
+### 5.12 다음 챕터 미리보기
+
+**챕터 6: 배포 전 검증 자동화**에서는 커밋 시점에서 오류를 차단하는 Husky와 lint-staged 설정을 다룹니다. GitHub에 푸시하기 전에 로컬에서 먼저 문제를 잡아내는 방법을 배웁니다.
 
 ---
 
 ## 챕터 6: 배포 전 검증 자동화
 
-> 작성 예정
+### 6.1 "실패를 빨리 발견할수록 비용이 줄어든다"
+
+오류를 발견하는 시점에 따라 수정 비용이 기하급수적으로 증가합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                오류 발견 시점별 수정 비용                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  발견 시점              예상 소요 시간      스트레스 레벨         │
+│  ─────────────────────  ──────────────────  ─────────────────   │
+│                                                                 │
+│  코드 작성 중 (IDE)     30초               😊 낮음              │
+│       │                                                         │
+│       ▼                                                         │
+│  커밋 시점 (pre-commit) 1~2분              🙂 낮음              │
+│       │                                                         │
+│       ▼                                                         │
+│  푸시 후 (CI)           5~10분             😐 보통              │
+│       │                                                         │
+│       ▼                                                         │
+│  배포 실패 (Vercel)     15~30분            😟 높음              │
+│       │                                                         │
+│       ▼                                                         │
+│  프로덕션 오류          1시간+             😱 매우 높음          │
+│                                                                 │
+│  💡 목표: 오류를 가능한 한 위쪽에서 잡기!                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 6.2 Git Hooks 이해하기
+
+Git은 특정 이벤트가 발생할 때 스크립트를 실행하는 **Hook 시스템**을 제공합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Git Hook 실행 시점                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  git commit 실행                                                │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │   pre-commit    │ ← 커밋 전 검증 (lint, format)              │
+│  └────────┬────────┘                                            │
+│           │ 통과                                                │
+│           ▼                                                     │
+│  ┌─────────────────┐                                            │
+│  │  commit-msg     │ ← 커밋 메시지 검증                         │
+│  └────────┬────────┘                                            │
+│           │ 통과                                                │
+│           ▼                                                     │
+│      커밋 완료 ✅                                                │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  git push 실행                                                  │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │    pre-push     │ ← 푸시 전 검증 (테스트, 빌드)              │
+│  └────────┬────────┘                                            │
+│           │ 통과                                                │
+│           ▼                                                     │
+│      푸시 완료 ✅                                                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 6.3 Husky 설치 및 설정
+
+**Husky**는 Git Hooks를 쉽게 관리할 수 있게 해주는 도구입니다.
+
+**설치:**
+
+```bash
+# Husky 설치
+npm install -D husky
+
+# Husky 초기화 (.husky 폴더 생성)
+npx husky init
+```
+
+**자동으로 생성되는 구조:**
+
+```
+프로젝트/
+├── .husky/
+│   ├── _/
+│   │   └── husky.sh
+│   └── pre-commit      ← 여기에 스크립트 작성
+├── package.json
+└── ...
+```
+
+**package.json에 자동 추가된 스크립트:**
+
+```json
+{
+  "scripts": {
+    "prepare": "husky"
+  }
+}
+```
+
+> `prepare` 스크립트는 `npm install` 후 자동 실행되어 Husky를 설정합니다.
+
+### 6.4 Pre-commit Hook 설정
+
+**기본 pre-commit hook (.husky/pre-commit):**
+
+```bash
+#!/usr/bin/env sh
+
+# TypeScript 타입 체크
+npm run typecheck
+
+# ESLint 검사
+npm run lint
+
+# 빌드 테스트 (선택 - 시간이 오래 걸릴 수 있음)
+# npm run build
+```
+
+**실행 권한 부여 (필요한 경우):**
+
+```bash
+chmod +x .husky/pre-commit
+```
+
+이제 `git commit`을 실행하면 **자동으로 검증이 실행**되고, 실패하면 커밋이 중단됩니다.
+
+### 6.5 lint-staged: 변경된 파일만 검사
+
+전체 프로젝트를 검사하면 시간이 오래 걸립니다. **lint-staged**는 **Git에 스테이징된 파일만** 검사합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│               전체 검사 vs lint-staged 비교                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  전체 검사 (npm run lint):                                      │
+│  ─────────────────────────                                      │
+│  프로젝트 전체 파일 검사 → 30초 ~ 2분                           │
+│  파일 1개만 수정해도 전체 검사                                   │
+│                                                                 │
+│  lint-staged:                                                   │
+│  ────────────                                                   │
+│  스테이징된 파일만 검사 → 1~5초                                  │
+│  수정한 파일만 빠르게 검증                                       │
+│                                                                 │
+│  💡 빠른 피드백 → 개발 흐름 유지                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**설치:**
+
+```bash
+npm install -D lint-staged
+```
+
+**설정 파일 생성 (.lintstagedrc.json):**
+
+```json
+{
+  "*.{ts,tsx}": ["eslint --fix --max-warnings=0", "prettier --write"],
+  "*.{js,jsx}": ["eslint --fix --max-warnings=0", "prettier --write"],
+  "*.prisma": ["npx prisma format", "npx prisma validate"],
+  "*.{json,md}": ["prettier --write"]
+}
+```
+
+**Husky와 연동 (.husky/pre-commit):**
+
+```bash
+#!/usr/bin/env sh
+
+npx lint-staged
+```
+
+### 6.6 TypeScript 전체 타입 체크 포함하기
+
+lint-staged는 **개별 파일 단위**로 동작하지만, TypeScript 타입 체크는 **프로젝트 전체**를 봐야 합니다.
+
+**문제 시나리오:**
+
+```typescript
+// types.ts (수정 안 함)
+export interface User {
+  id: string;
+  name: string;
+}
+
+// userService.ts (수정함 - 스테이징됨)
+import { User } from './types';
+
+function getUser(): User {
+  return { id: '1' }; // ❌ name 누락 - 하지만 types.ts는 검사 안 됨!
+}
+```
+
+**해결책 (.lintstagedrc.js):**
+
+```javascript
+module.exports = {
+  '*.{ts,tsx}': [
+    // TypeScript 전체 프로젝트 타입 체크 (파일 인자 무시)
+    () => 'tsc --noEmit',
+    // 스테이징된 파일만 lint + format
+    'eslint --fix --max-warnings=0',
+    'prettier --write',
+  ],
+  '*.prisma': ['npx prisma format', 'npx prisma validate'],
+  '*.{json,md,css}': ['prettier --write'],
+};
+```
+
+> `() => 'tsc --noEmit'` 형태로 작성하면 파일 목록을 인자로 받지 않고 명령어만 실행합니다.
+
+### 6.7 Pre-push Hook: 푸시 전 최종 검증
+
+커밋은 빠르게, 푸시 전에 더 철저한 검증을 수행합니다.
+
+**Pre-push hook 생성:**
+
+```bash
+# .husky/pre-push 파일 생성
+echo '#!/usr/bin/env sh
+npm run typecheck
+npm run lint
+npm run build
+' > .husky/pre-push
+
+chmod +x .husky/pre-push
+```
+
+**.husky/pre-push:**
+
+```bash
+#!/usr/bin/env sh
+
+echo "🔍 푸시 전 검증 시작..."
+
+# TypeScript 타입 체크
+echo "📝 TypeScript 검사 중..."
+npm run typecheck || exit 1
+
+# ESLint 검사
+echo "📋 ESLint 검사 중..."
+npm run lint || exit 1
+
+# 빌드 테스트
+echo "🏗️ 빌드 테스트 중..."
+npm run build || exit 1
+
+echo "✅ 모든 검증 통과! 푸시를 진행합니다."
+```
+
+### 6.8 Commit Message 규칙 강제하기
+
+일관된 커밋 메시지는 히스토리 추적에 도움이 됩니다.
+
+**commitlint 설치:**
+
+```bash
+npm install -D @commitlint/cli @commitlint/config-conventional
+```
+
+**설정 파일 (commitlint.config.js):**
+
+```javascript
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'feat', // 새 기능
+        'fix', // 버그 수정
+        'docs', // 문서 수정
+        'style', // 코드 포맷팅
+        'refactor', // 리팩토링
+        'test', // 테스트
+        'chore', // 빌드, 설정 등
+        'perf', // 성능 개선
+        'ci', // CI 설정
+        'revert', // 되돌리기
+      ],
+    ],
+    'subject-max-length': [2, 'always', 72],
+  },
+};
+```
+
+**Husky와 연동:**
+
+```bash
+echo '#!/usr/bin/env sh
+npx --no -- commitlint --edit $1
+' > .husky/commit-msg
+
+chmod +x .husky/commit-msg
+```
+
+**커밋 메시지 예시:**
+
+```bash
+# ✅ 올바른 형식
+git commit -m "feat: 사용자 로그인 기능 추가"
+git commit -m "fix: 로그아웃 시 세션 미삭제 버그 수정"
+git commit -m "docs: README 설치 방법 업데이트"
+
+# ❌ 잘못된 형식 (커밋 거부됨)
+git commit -m "로그인 기능"
+git commit -m "update"
+```
+
+### 6.9 완전한 설정 예시
+
+**package.json:**
+
+```json
+{
+  "name": "my-project",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
+    "verify": "npm run typecheck && npm run lint && npm run build"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0"
+  }
+}
+```
+
+**.lintstagedrc.js:**
+
+```javascript
+module.exports = {
+  '*.{ts,tsx}': [() => 'tsc --noEmit', 'eslint --fix --max-warnings=0', 'prettier --write'],
+  '*.prisma': ['npx prisma format', 'npx prisma validate'],
+  '*.{js,jsx,json,md,css,scss}': ['prettier --write'],
+};
+```
+
+**.husky/pre-commit:**
+
+```bash
+#!/usr/bin/env sh
+
+echo "🔍 커밋 전 검증..."
+npx lint-staged
+```
+
+**.husky/pre-push:**
+
+```bash
+#!/usr/bin/env sh
+
+echo "🚀 푸시 전 최종 검증..."
+
+npm run typecheck || exit 1
+npm run lint || exit 1
+npm run build || exit 1
+
+echo "✅ 검증 완료!"
+```
+
+**.husky/commit-msg:**
+
+```bash
+#!/usr/bin/env sh
+
+npx --no -- commitlint --edit $1
+```
+
+**commitlint.config.js:**
+
+```javascript
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+};
+```
+
+### 6.10 검증 우회하기 (긴급 상황)
+
+가끔 급하게 커밋/푸시해야 할 때가 있습니다. **권장하지 않지만** 우회 방법이 있습니다.
+
+```bash
+# pre-commit hook 우회
+git commit --no-verify -m "hotfix: 긴급 수정"
+
+# pre-push hook 우회
+git push --no-verify
+
+# 축약형
+git commit -n -m "hotfix: 긴급 수정"
+```
+
+> ⚠️ **주의:** `--no-verify`는 정말 긴급한 상황에서만 사용하세요. CI에서 실패하면 결국 수정해야 합니다.
+
+### 6.11 트러블슈팅
+
+**문제 1: "husky - command not found"**
+
+```bash
+# 해결: Husky 재설치
+rm -rf .husky
+npm install
+npx husky init
+```
+
+**문제 2: Windows에서 Hook이 실행 안 됨**
+
+```bash
+# Git 설정 확인
+git config core.hooksPath
+
+# .husky로 설정
+git config core.hooksPath .husky
+```
+
+**문제 3: lint-staged가 너무 느림**
+
+```javascript
+// .lintstagedrc.js - 병렬 실행 비활성화
+module.exports = {
+  '*.{ts,tsx}': ['eslint --fix --max-warnings=0'],
+};
+
+// tsc는 pre-push로 이동
+```
+
+**문제 4: Prisma validate 실패**
+
+```bash
+# DATABASE_URL 없이도 validate 가능하도록
+# validate는 스키마 문법만 체크함
+
+# 만약 실패하면 스키마 문법 오류
+npx prisma validate
+```
+
+### 6.12 검증 자동화 체크리스트
+
+```
+□ Husky 설치 및 초기화
+  npm install -D husky && npx husky init
+
+□ lint-staged 설치 및 설정
+  npm install -D lint-staged
+  .lintstagedrc.js 파일 생성
+
+□ pre-commit hook 설정
+  .husky/pre-commit에 npx lint-staged 추가
+
+□ pre-push hook 설정 (선택)
+  .husky/pre-push에 빌드 검증 추가
+
+□ commitlint 설정 (선택)
+  npm install -D @commitlint/cli @commitlint/config-conventional
+  .husky/commit-msg 설정
+
+□ 테스트 커밋으로 동작 확인
+  git add . && git commit -m "test: hook 테스트"
+```
+
+### 6.13 다음 챕터 미리보기
+
+**챕터 7: AI 코딩 도구 컨텍스트 관리 전략**에서는 Claude Code Web의 컨텍스트 한계를 극복하는 방법을 다룹니다. CLAUDE.md 파일 작성법, 효과적인 세션 관리, 그리고 AI와 효율적으로 협업하는 프롬프트 전략을 배웁니다.
 
 ---
 
