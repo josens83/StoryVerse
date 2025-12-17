@@ -121,11 +121,11 @@ export function apiPaginated<T>(
  */
 export const ApiErrors = {
   /** Authentication required (no token or invalid token) */
-  unauthorized: (message = ERROR_MESSAGES.AUTH.UNAUTHORIZED) =>
+  unauthorized: (message: string = ERROR_MESSAGES.AUTH.UNAUTHORIZED) =>
     apiError(message, 401, ErrorCodes.AUTHENTICATION_REQUIRED),
 
   /** User authenticated but lacks permission */
-  forbidden: (message = ERROR_MESSAGES.PERMISSION.FORBIDDEN) =>
+  forbidden: (message: string = ERROR_MESSAGES.PERMISSION.FORBIDDEN) =>
     apiError(message, 403, ErrorCodes.FORBIDDEN),
 
   /** Resource not found */

@@ -418,3 +418,34 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+// Comment Types
+export interface Comment {
+  id: string;
+  userId: string;
+  user?: {
+    id: string;
+    username: string;
+    avatar?: string;
+    tier: UserTier;
+  };
+  novelId?: string;
+  chapterId?: string;
+  parentId?: string;
+  content: string;
+  likeCount: number;
+  replyCount: number;
+  isLiked?: boolean;
+  isSpoiler: boolean;
+  isDeleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CommentReaction {
+  id: string;
+  userId: string;
+  commentId: string;
+  type: 'like' | 'dislike';
+  createdAt: Date;
+}
