@@ -401,13 +401,846 @@ Prisma는 `prisma generate` 명령어로 TypeScript 타입을 생성합니다. �
 
 ## 챕터 3: TypeScript 클라우드 배포 완벽 가이드
 
-> 작성 예정
+### 3.1 대소문자 문제 완전 해결
+
+앞서 설명한 대로, 파일명 대소문자 불일치는 **TypeScript 배포 오류의 #1 원인**입니다. 이 문제를 완전히 예방하는 설정을 적용해봅시다.
+
+**tsconfig.json 필수 설정:**
+
+```json
+{
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true
+  }
+}
+```
+
+이 설정을 활성화하면 로컬(Windows/macOS)에서도 대소문자 불일치를 오류로 감지합니다.
+
+**Git 설정도 함께 변경:**
+
+```bash
+# 대소문자 변경 추적 활성화
+git config core.ignorecase false
+
+# 이미 잘못 커밋된 파일이 있다면 캐시 초기화
+git rm -r --cached .
+git add --all .
+git commit -m "Fix file casing issues"
+```
+
+**ESLint로 import 경로 검증 추가:**
+
+```bash
+npm install -D eslint-plugin-import
+```
+
+```javascript
+// .eslintrc.js
+module.exports = {
+  plugins: ['import'],
+  rules: {
+    'import/no-unresolved': 'error',
+  },
+  settings: {
+    'import/resolver': {
+      typescript: true,
+      node: true,
+    },
+  },
+};
+```
+
+### 3.2 Strict Mode 완벽 이해
+
+TypeScript의 `strict` 옵션은 여러 개별 옵션의 묶음입니다. 클라우드 배포 시 문제가 되는 것들을 정확히 이해해야 합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  strict: true가 활성화하는 옵션들                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  옵션                          영향                             │
+│  ────────────────────────────  ──────────────────────────────  │
+│                                                                 │
+│  strictNullChecks              null/undefined 엄격 검사         │
+│                                string | null 구분 필요          │
+│                                                                 │
+│  strictFunctionTypes           함수 매개변수 타입 엄격 검사     │
+│                                                                 │
+│  strictBindCallApply           bind, call, apply 타입 검사      │
+│                                                                 │
+│  strictPropertyInitialization  클래스 속성 초기화 강제          │
+│                                constructor에서 초기화 필요      │
+│                                                                 │
+│  noImplicitAny                 암시적 any 금지                  │
+│                                타입 명시 필요                   │
+│                                                                 │
+│  noImplicitThis                암시적 this 금지                 │
+│                                                                 │
+│  alwaysStrict                  "use strict" 자동 추가           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**흔한 strict mode 오류와 해결:**
+
+```typescript
+// ❌ 오류: Object is possibly 'undefined'
+function getUser(id: string) {
+  const users = [{ id: '1', name: 'Kim' }];
+  const user = users.find((u) => u.id === id);
+  return user.name; // user가 undefined일 수 있음!
+}
+
+// ✅ 해결 1: 옵셔널 체이닝
+return user?.name;
+
+// ✅ 해결 2: 명시적 체크
+if (!user) throw new Error('User not found');
+return user.name;
+
+// ✅ 해결 3: Non-null assertion (확실할 때만!)
+return user!.name;
+```
+
+```typescript
+// ❌ 오류: Parameter 'event' implicitly has an 'any' type
+const handleClick = (event) => { ... }
+
+// ✅ 해결: 타입 명시
+const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => { ... }
+```
+
+### 3.3 모듈 해석 문제 해결
+
+`Cannot find module` 오류의 대부분은 `moduleResolution` 설정 문제입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                moduleResolution 옵션 비교                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  "node"        전통적인 Node.js 방식                            │
+│                node_modules 폴더 탐색                           │
+│                CJS 프로젝트에 적합                              │
+│                                                                 │
+│  "node16"      Node.js 16+ ESM 지원                             │
+│  "nodenext"    package.json exports 필드 인식                   │
+│                .js 확장자 필요할 수 있음                        │
+│                                                                 │
+│  "bundler"     ⭐ 번들러 사용 프로젝트에 최적 (권장)             │
+│                Vite, webpack, esbuild 등                        │
+│                확장자 생략 가능                                  │
+│                package.json exports 인식                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Next.js/Vite 프로젝트 권장 설정:**
+
+```json
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  }
+}
+```
+
+**JSON 파일 import 오류 해결:**
+
+```json
+{
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  }
+}
+```
+
+```typescript
+// 이제 가능
+import config from './config.json';
+```
+
+### 3.4 Path Alias 설정 (@/ 경로)
+
+상대 경로 지옥(`../../../../components/Button`)을 탈출하는 path alias 설정입니다.
+
+**tsconfig.json:**
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@types/*": ["./src/types/*"]
+    }
+  }
+}
+```
+
+**Next.js는 자동 인식됩니다.** 하지만 다른 프레임워크는 별도 설정이 필요합니다.
+
+**Vite 추가 설정 (vite.config.ts):**
+
+```typescript
+import { defineConfig } from 'vite';
+import path from 'path';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+### 3.5 완벽한 tsconfig.json 템플릿
+
+**Next.js + Vercel 프로젝트용:**
+
+```json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    // 타겟 환경
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    // Strict 모드 (모두 활성화 권장)
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // 모듈 호환성
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    // 빌드 최적화
+    "skipLibCheck": true,
+    "incremental": true,
+
+    // 대소문자 강제 (필수!)
+    "forceConsistentCasingInFileNames": true,
+
+    // Next.js 전용
+    "jsx": "preserve",
+    "noEmit": true,
+    "plugins": [{ "name": "next" }],
+
+    // Path Alias
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next", "out"]
+}
+```
+
+**Express/Node.js 백엔드용:**
+
+```json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "skipLibCheck": true,
+    "incremental": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+### 3.6 흔한 TypeScript 오류 즉시 해결 가이드
+
+| 오류 메시지                              | 원인                          | 즉시 해결법                            |
+| ---------------------------------------- | ----------------------------- | -------------------------------------- |
+| `TS1149: File name differs in casing`    | import 경로 대소문자 불일치   | import 경로를 실제 파일명과 일치시키기 |
+| `TS2307: Cannot find module`             | 모듈 경로 오류 또는 타입 없음 | `@types/` 패키지 설치 또는 경로 확인   |
+| `TS2322: Type 'X' is not assignable`     | 타입 불일치                   | 타입 단언 또는 타입 수정               |
+| `TS2531: Object is possibly 'null'`      | null 체크 누락                | 옵셔널 체이닝 `?.` 또는 null 체크 추가 |
+| `TS7006: Parameter implicitly has 'any'` | 매개변수 타입 누락            | 명시적 타입 추가                       |
+| `TS18048: 'X' is possibly 'undefined'`   | undefined 체크 누락           | 옵셔널 체이닝 또는 기본값 설정         |
+
+**타입 단언이 필요한 경우:**
+
+```typescript
+// 외부 라이브러리 타입이 불완전할 때
+const result = someLibraryFunction() as ExpectedType;
+
+// DOM 요소 타입 단언
+const button = document.getElementById('btn') as HTMLButtonElement;
+
+// 확실히 값이 있을 때 (주의해서 사용)
+const value = possiblyNull!;
+```
+
+### 3.7 배포 전 TypeScript 검증 명령어
+
+**package.json에 추가:**
+
+```json
+{
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch",
+    "verify": "npm run typecheck && npm run lint && npm run build"
+  }
+}
+```
+
+**배포 전 필수 실행:**
+
+```bash
+# 타입 체크만 (빠름)
+npm run typecheck
+
+# 전체 검증 (권장)
+npm run verify
+```
+
+### 3.8 로컬에서 Vercel 환경 완벽 재현
+
+```bash
+# Vercel CLI 설치
+npm install -g vercel
+
+# 프로젝트 연결
+vercel link
+
+# 환경변수 동기화 (중요!)
+vercel pull
+
+# 로컬에서 Vercel과 동일하게 빌드
+vercel build
+
+# 빌드 결과물로 로컬 실행
+vercel dev
+```
+
+**`vercel build`가 성공하면 실제 배포도 성공합니다.** 이 명령어를 습관적으로 사용하세요.
+
+### 3.9 TypeScript 배포 오류 체크리스트
+
+배포 전 이 항목들을 확인하세요:
+
+```
+□ tsconfig.json에 forceConsistentCasingInFileNames: true 설정
+□ import 경로의 대소문자가 실제 파일명과 일치
+□ npm run typecheck 통과
+□ npm run build 로컬에서 성공
+□ package.json에 engines.node 버전 명시
+□ 모든 타입 오류 해결 (no any, no implicit)
+□ vercel build 또는 로컬 프로덕션 빌드 성공
+```
 
 ---
 
 ## 챕터 4: Prisma 타입 문제 해결 및 최적화
 
-> 작성 예정
+### 4.1 Prisma Client 생성 원리 이해
+
+Prisma의 독특한 점은 **스키마 파일에서 TypeScript 타입을 동적으로 생성**한다는 것입니다. 이 과정을 이해하면 대부분의 오류를 예방할 수 있습니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 Prisma Client 생성 흐름                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  prisma/schema.prisma                                           │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────────┐                                            │
+│  │ prisma generate │  ← 이 명령이 핵심!                          │
+│  └─────────────────┘                                            │
+│         │                                                       │
+│         ▼                                                       │
+│  node_modules/.prisma/client/                                   │
+│  ├── index.js          (런타임 코드)                            │
+│  ├── index.d.ts        (TypeScript 타입)                        │
+│  ├── schema.prisma     (스키마 복사본)                          │
+│  └── libquery_engine-* (쿼리 엔진 바이너리)                     │
+│         │                                                       │
+│         ▼                                                       │
+│  node_modules/@prisma/client/                                   │
+│  └── index.d.ts        (.prisma/client로 re-export)             │
+│                                                                 │
+│  💡 @prisma/client는 .prisma/client의 래퍼일 뿐!                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**핵심 포인트:** `prisma generate`가 실행되지 않으면 타입이 없어서 빌드가 실패합니다.
+
+### 4.2 "Cannot find module '@prisma/client'" 완벽 해결
+
+이 오류의 99%는 **Vercel/Railway의 캐싱 메커니즘** 때문입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    문제 발생 시나리오                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  첫 번째 배포:                                                   │
+│  ─────────────                                                  │
+│  npm install     → prisma 설치됨                                │
+│  postinstall     → prisma generate 실행                         │
+│  npm run build   → 타입 있음, 빌드 성공 ✅                       │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  두 번째 배포 (schema.prisma 변경 없음):                         │
+│  ───────────────────────────────────────                        │
+│  npm install     → node_modules 캐시 사용 (설치 건너뜀)         │
+│  postinstall     → 건너뜀! (npm install 안 했으니까)            │
+│  npm run build   → 오래된 타입 또는 타입 없음 ❌                 │
+│                                                                 │
+│  오류: Cannot find module '@prisma/client'                      │
+│  또는: PrismaClient is not a constructor                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**해결책 1: postinstall 스크립트 (필수)**
+
+```json
+{
+  "scripts": {
+    "postinstall": "prisma generate"
+  }
+}
+```
+
+**해결책 2: 빌드 명령어에 generate 포함**
+
+```json
+{
+  "scripts": {
+    "build": "prisma generate && next build"
+  }
+}
+```
+
+**해결책 3: Vercel 전용 빌드 명령어**
+
+Vercel 대시보드 또는 `vercel.json`에서:
+
+```json
+{
+  "buildCommand": "prisma generate && prisma migrate deploy && next build"
+}
+```
+
+### 4.3 prisma를 dependencies에 넣어야 하는 이유
+
+많은 튜토리얼이 `prisma`를 `devDependencies`에 넣으라고 하지만, **클라우드 배포에서는 문제**가 됩니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│           dependencies vs devDependencies 차이                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  로컬 개발:                                                      │
+│  ──────────                                                     │
+│  npm install  → dependencies + devDependencies 모두 설치        │
+│  prisma CLI   → 사용 가능 ✅                                    │
+│                                                                 │
+│  프로덕션 배포 (NODE_ENV=production):                            │
+│  ────────────────────────────────────                           │
+│  npm install --production  → dependencies만 설치                │
+│  또는 npm ci                 (devDependencies 제외)              │
+│  prisma CLI                → 찾을 수 없음 ❌                     │
+│                                                                 │
+│  💡 해결: prisma를 dependencies에 넣기                           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**올바른 package.json:**
+
+```json
+{
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0"
+  }
+}
+```
+
+### 4.4 Prisma 스키마 올바른 설정
+
+**기본 스키마 템플릿 (prisma/schema.prisma):**
+
+```prisma
+// 데이터소스 설정
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")  // 마이그레이션용 직접 연결
+}
+
+// 클라이언트 생성기
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 모델 예시
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+### 4.5 Connection Pooling: Serverless 필수 설정
+
+Serverless 환경(Vercel, Railway 등)에서 **Connection Pooling 없이 배포하면 DB 연결이 고갈**됩니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Serverless Connection 문제                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  문제 상황:                                                      │
+│  ──────────                                                     │
+│                                                                 │
+│  요청 1 → 새 함수 인스턴스 → 새 DB 연결 (연결 1)                 │
+│  요청 2 → 새 함수 인스턴스 → 새 DB 연결 (연결 2)                 │
+│  요청 3 → 새 함수 인스턴스 → 새 DB 연결 (연결 3)                 │
+│  ...                                                            │
+│  요청 100 → 연결 한계 초과! ❌                                   │
+│                                                                 │
+│  PostgreSQL 기본 연결 제한: ~100개                               │
+│  Serverless는 요청마다 새 연결 시도 → 금방 고갈                  │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  해결책: Connection Pooler 사용                                  │
+│  ───────────────────────────────                                │
+│                                                                 │
+│  요청 1 ─┐                                                       │
+│  요청 2 ─┼─→ Connection Pooler ─→ DB (연결 5개만 유지)           │
+│  요청 3 ─┘      (PgBouncer 등)                                   │
+│                                                                 │
+│  Pooler가 연결을 재사용하여 효율적으로 관리                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**환경변수 설정 (Supabase 예시):**
+
+```bash
+# .env
+
+# Pooled connection (애플리케이션용) - 포트 6543
+DATABASE_URL="postgresql://user:pass@db.xxx.supabase.co:6543/postgres?pgbouncer=true"
+
+# Direct connection (마이그레이션용) - 포트 5432
+DIRECT_URL="postgresql://user:pass@db.xxx.supabase.co:5432/postgres"
+```
+
+**스키마 설정:**
+
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")      // Pooled (런타임)
+  directUrl = env("DIRECT_URL")        // Direct (마이그레이션)
+}
+```
+
+| 플랫폼      | Pooler 포트 | Direct 포트   |
+| ----------- | ----------- | ------------- |
+| Supabase    | 6543        | 5432          |
+| Neon        | 기본 URL    | (별도 설정)   |
+| PlanetScale | 기본 URL    | (MySQL, 다름) |
+
+### 4.6 Prisma Client 싱글톤 패턴 (필수)
+
+개발 환경에서 Hot Reload 때마다 새 PrismaClient가 생성되면 **연결 누수**가 발생합니다.
+
+**lib/prisma.ts (또는 lib/db.ts):**
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
+export default prisma;
+```
+
+**사용법:**
+
+```typescript
+// app/api/users/route.ts
+import { prisma } from '@/lib/prisma';
+
+export async function GET() {
+  const users = await prisma.user.findMany();
+  return Response.json(users);
+}
+```
+
+**❌ 절대 하지 말 것:**
+
+```typescript
+// 매 요청마다 새 인스턴스 생성 - 연결 누수!
+export async function GET() {
+  const prisma = new PrismaClient(); // ❌
+  const users = await prisma.user.findMany();
+  return Response.json(users);
+}
+```
+
+### 4.7 Prisma Accelerate: 엣지 환경 최적화
+
+Prisma Accelerate는 **글로벌 캐싱**과 **Connection Pooling**을 제공하는 Prisma 공식 서비스입니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 Prisma Accelerate 구조                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [Edge Function]                                                │
+│       │                                                         │
+│       ▼                                                         │
+│  [Prisma Accelerate] ←── 전 세계 분산 캐시                      │
+│       │                                                         │
+│       ▼                                                         │
+│  [Connection Pool]                                              │
+│       │                                                         │
+│       ▼                                                         │
+│  [Database]                                                     │
+│                                                                 │
+│  장점:                                                          │
+│  • 쿼리 결과 캐싱 (응답 속도 향상)                               │
+│  • 자동 Connection Pooling                                      │
+│  • 엣지에서 실행 가능 (Vercel Edge Functions)                    │
+│  • 쿼리 엔진 바이너리 불필요 (번들 크기 ~40MB 감소)              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**설정 방법:**
+
+1. **Prisma Console에서 Accelerate 활성화** (https://console.prisma.io)
+
+2. **스키마 수정:**
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+```
+
+3. **환경변수 설정:**
+
+```bash
+# Accelerate 연결 문자열로 교체
+DATABASE_URL="prisma://accelerate.prisma-data.net/?api_key=YOUR_KEY"
+
+# Direct URL은 마이그레이션용으로 유지
+DIRECT_URL="postgresql://user:pass@your-db:5432/db"
+```
+
+4. **클라이언트 코드:**
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+import { withAccelerate } from '@prisma/extension-accelerate';
+
+const prisma = new PrismaClient().$extends(withAccelerate());
+
+// 캐싱 적용 쿼리
+const posts = await prisma.post.findMany({
+  cacheStrategy: {
+    ttl: 60, // 60초 캐시
+    swr: 120, // 120초 Stale-While-Revalidate
+  },
+});
+```
+
+### 4.8 Binary Target 오류 해결
+
+Prisma는 플랫폼별로 다른 쿼리 엔진 바이너리를 사용합니다. 로컬과 클라우드의 OS가 다르면 오류가 발생합니다.
+
+**오류 메시지:**
+
+```
+PrismaClientInitializationError: Unable to require
+`/app/node_modules/.prisma/client/libquery_engine-rhel-openssl-3.0.x.so.node`
+
+Prisma Client could not locate the Query Engine for runtime "rhel-openssl-3.0.x"
+```
+
+**해결책 1: Pure JavaScript 모드 (Prisma 5.16.0+, 권장)**
+
+```prisma
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"  // Rust 바이너리 대신 JS 엔진 사용
+}
+```
+
+장점:
+
+- 바이너리 호환성 문제 완전 해결
+- 번들 크기 대폭 감소
+- 엣지 환경 지원
+
+**해결책 2: Binary Target 명시**
+
+```prisma
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+```
+
+| 플랫폼           | Binary Target                     |
+| ---------------- | --------------------------------- |
+| Vercel (Node.js) | `rhel-openssl-3.0.x`              |
+| Railway          | `linux-musl-openssl-3.0.x`        |
+| AWS Lambda       | `rhel-openssl-1.0.x` 또는 `3.0.x` |
+| Docker Alpine    | `linux-musl-openssl-3.0.x`        |
+
+### 4.9 흔한 Prisma 오류 즉시 해결
+
+| 오류                                  | 원인                 | 해결                                                 |
+| ------------------------------------- | -------------------- | ---------------------------------------------------- |
+| `Cannot find module '@prisma/client'` | generate 안 됨       | `postinstall: "prisma generate"` 추가                |
+| `PrismaClient is not a constructor`   | 잘못된 import        | `import { PrismaClient } from '@prisma/client'` 확인 |
+| `Unable to locate Query Engine`       | 바이너리 불일치      | `engineType: "client"` 또는 binaryTargets 추가       |
+| `Too many connections`                | Pooling 없음         | Connection Pooler URL 사용                           |
+| `P1001: Can't reach database`         | 환경변수 누락        | DATABASE_URL 확인                                    |
+| `P2002: Unique constraint failed`     | 중복 데이터          | 비즈니스 로직에서 처리                               |
+| `P2025: Record not found`             | 없는 레코드 업데이트 | findFirst 후 update 또는 upsert 사용                 |
+
+### 4.10 Prisma 배포 체크리스트
+
+```
+□ package.json의 postinstall에 "prisma generate" 추가
+□ prisma를 dependencies에 포함 (devDependencies 아님)
+□ DATABASE_URL 환경변수 설정 완료
+□ Connection Pooling 설정 (Serverless 환경)
+□ directUrl 설정 (마이그레이션용)
+□ PrismaClient 싱글톤 패턴 사용
+□ npx prisma validate 통과
+□ npx prisma generate 로컬 성공
+□ Binary target 또는 engineType: "client" 설정
+```
+
+### 4.11 완전한 Prisma + Next.js package.json
+
+```json
+{
+  "name": "my-prisma-app",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "verify": "npm run typecheck && npm run lint && npm run build"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0",
+    "next": "^14.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+```
 
 ---
 
