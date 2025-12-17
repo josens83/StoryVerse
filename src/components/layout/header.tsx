@@ -94,7 +94,8 @@ export function Header() {
           {/* Search */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            aria-label="검색"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform dark:text-gray-400 dark:hover:bg-gray-800"
           >
             <Search className="h-5 w-5" />
           </button>
@@ -125,7 +126,9 @@ export function Header() {
               <div className="relative">
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300"
+                  aria-label="프로필 메뉴"
+                  aria-expanded={isProfileMenuOpen}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 active:scale-95 transition-transform dark:bg-gray-700 dark:text-gray-300"
                 >
                   {user.avatar ? (
                     <img
@@ -202,7 +205,9 @@ export function Header() {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 md:hidden"
+            aria-label={isMobileMenuOpen ? '메뉴 닫기' : '메뉴 열기'}
+            aria-expanded={isMobileMenuOpen}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform dark:text-gray-400 dark:hover:bg-gray-800 md:hidden"
           >
             {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>

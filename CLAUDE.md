@@ -65,6 +65,115 @@ src/
 - 한국어 주석 OK, 변수명/함수명은 영어
 - Tailwind CSS 유틸리티 클래스 사용
 
+## 디자인 시스템
+
+### UI 컴포넌트 사용 규칙
+
+새로운 UI를 만들 때 반드시 기존 컴포넌트를 먼저 확인하세요:
+
+1. **먼저 기존 컴포넌트 확인**: `src/components/ui/` 디렉토리
+2. **커스텀 컴포넌트는 최후의 수단**
+
+### 설치된 UI 컴포넌트
+
+| 컴포넌트       | 경로                              | 용도                                                                 |
+| -------------- | --------------------------------- | -------------------------------------------------------------------- |
+| Button         | `@/components/ui/button`          | 모든 버튼 액션 (variants: default, outline, ghost, destructive)      |
+| Card           | `@/components/ui/card`            | 컨텐츠 그룹핑 (CardHeader, CardTitle, CardContent, CardFooter)       |
+| Input          | `@/components/ui/input`           | 텍스트 입력 필드                                                     |
+| Badge          | `@/components/ui/badge`           | 상태 표시, 태그 (variants: default, secondary, destructive, outline) |
+| Modal          | `@/components/ui/modal`           | 다이얼로그, 확인창                                                   |
+| Tabs           | `@/components/ui/tabs`            | 탭 네비게이션                                                        |
+| Skeleton       | `@/components/ui/skeleton`        | 로딩 상태 표시                                                       |
+| Toast          | `@/components/ui/toast`           | 알림 메시지                                                          |
+| Loading        | `@/components/ui/loading`         | 로딩 스피너                                                          |
+| OptimizedImage | `@/components/ui/optimized-image` | 최적화된 이미지                                                      |
+
+### 레이아웃 컴포넌트
+
+| 컴포넌트  | 경로                             | 용도                   |
+| --------- | -------------------------------- | ---------------------- |
+| Header    | `@/components/layout/header`     | 페이지 상단 네비게이션 |
+| Footer    | `@/components/layout/footer`     | 페이지 하단 정보       |
+| BottomNav | `@/components/layout/bottom-nav` | 모바일 하단 네비게이션 |
+
+### 스타일링 규칙
+
+```tsx
+// ✅ 올바른 방법 - 기존 컴포넌트 사용
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+
+<Button variant="outline" size="sm">클릭</Button>
+<Card><CardContent>내용</CardContent></Card>
+
+// ❌ 잘못된 방법 - 인라인 스타일, 커스텀 버튼
+<button style={{ backgroundColor: '#007bff' }}>클릭</button>
+<div className="border rounded p-4">내용</div>  // Card 대신 직접 작성
+```
+
+### 반응형 디자인 (Mobile-First)
+
+모든 스타일은 **모바일 기준**으로 먼저 작성하고, 큰 화면으로 확장합니다:
+
+```tsx
+// ✅ 올바른 순서 (Mobile-First)
+className="
+  w-full          // 모바일: 전체 너비
+  md:w-1/2        // 태블릿: 절반
+  lg:w-1/3        // 데스크톱: 1/3
+"
+
+// ❌ 잘못된 순서 (Desktop-First)
+className="w-1/3 md:w-1/2 sm:w-full"
+```
+
+**브레이크포인트:**
+
+- 기본: 모바일 (< 768px)
+- `md:` 태블릿 (768px+)
+- `lg:` 데스크톱 (1024px+)
+
+### 터치 타겟 크기
+
+모바일 버튼/링크는 최소 44x44px 크기를 유지하세요:
+
+```tsx
+// 아이콘 버튼
+<button className="min-h-11 min-w-11 flex items-center justify-center">
+  <Icon className="h-5 w-5" />
+</button>
+
+// 네비게이션 링크
+<Link className="block px-4 py-3 min-h-11">메뉴</Link>
+```
+
+### 상태별 UI 패턴
+
+모든 데이터 페칭 UI는 4가지 상태를 처리해야 합니다:
+
+1. **로딩**: `<Skeleton />` 사용
+2. **에러**: 에러 메시지 + 재시도 버튼
+3. **빈 상태**: 안내 메시지 + 행동 유도
+4. **성공**: 데이터 표시
+
+```tsx
+// 예시 패턴
+if (isLoading) return <Skeleton className="h-32 w-full" />;
+if (error) return <ErrorState message={error.message} onRetry={refetch} />;
+if (!data?.length) return <EmptyState message="소설이 없습니다" />;
+return <NovelList novels={data} />;
+```
+
+### 하지 말아야 할 것
+
+- ❌ 인라인 스타일 (`style={{}}`)
+- ❌ 하드코딩된 색상값 (`#007bff`, `rgb()`)
+- ❌ 기존 컴포넌트 무시하고 새로 만들기
+- ❌ Desktop-First 스타일 작성
+- ❌ 44px 미만의 터치 타겟
+- ❌ 로딩/에러/빈 상태 누락
+
 ## 주요 기능
 
 ### 독자 기능

@@ -1,0 +1,216 @@
+# StoryVerse Project Rules
+
+## Tech Stack
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript (strict mode)
+- Database: Supabase (PostgreSQL)
+- Auth: Supabase Auth
+- State: Zustand + TanStack Query
+- Styling: Tailwind CSS
+- Testing: Vitest, React Testing Library
+
+## Code Style
+
+### Imports
+- Use absolute imports with @/ prefix
+- Order: React → Next.js → External → Internal → Types → Styles
+
+### Components
+- Functional components only
+- Props interface above component
+- Export named functions (not default)
+
+```tsx
+interface ComponentProps {
+  title: string
+  onClick?: () => void
+}
+
+export function Component({ title, onClick }: ComponentProps) {
+  return <div onClick={onClick}>{title}</div>
+}
+```
+
+### API Routes
+```tsx
+import { NextRequest } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api-response'
+
+export async function GET(request: NextRequest) {
+  try {
+    const data = await fetchData()
+    return apiSuccess(data)
+  } catch (error) {
+    return apiError('Error message', 500)
+  }
+}
+```
+
+## UI Components
+
+### Always use existing components:
+- Button: `import { Button } from "@/components/ui/button"`
+  - Variants: default, outline, ghost, destructive
+  - Sizes: default, sm, lg
+- Card: `import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"`
+- Input: `import { Input } from "@/components/ui/input"`
+- Badge: `import { Badge } from "@/components/ui/badge"`
+- Modal: `import { Modal } from "@/components/ui/modal"`
+- Skeleton: `import { Skeleton } from "@/components/ui/skeleton"`
+- Toast: `import { useToast } from "@/components/ui/toast"`
+
+### Layout Components:
+- Header: `import { Header } from "@/components/layout/header"`
+- Footer: `import { Footer } from "@/components/layout/footer"`
+- BottomNav: `import { BottomNav } from "@/components/layout/bottom-nav"`
+
+## Responsive Design (Mobile-First)
+
+### Required: Mobile-First approach
+Write base styles for mobile, then expand to larger screens.
+
+```tsx
+// ✅ Correct (Mobile-First)
+className="
+  w-full          // mobile: full width
+  md:w-1/2        // tablet: half
+  lg:w-1/3        // desktop: third
+"
+
+// ❌ Wrong (Desktop-First)
+className="w-1/3 md:w-1/2 sm:w-full"
+```
+
+### Breakpoints
+- Default: mobile (< 768px)
+- md: 768px+ (tablet)
+- lg: 1024px+ (desktop)
+
+### Class Order
+Always write: base → md → lg → xl
+
+## Touch Targets
+
+Minimum 44x44px for all interactive elements:
+
+```tsx
+// Icon buttons
+<button className="min-h-11 min-w-11 flex items-center justify-center">
+  <Icon className="h-5 w-5" />
+</button>
+
+// Navigation links
+<Link className="block px-4 py-3 min-h-11">Menu</Link>
+```
+
+## UI State Patterns
+
+Every data-fetching UI must handle 4 states:
+
+```tsx
+// 1. Loading
+if (isLoading) return <Skeleton className="h-32 w-full" />
+
+// 2. Error
+if (error) return (
+  <div className="text-center p-8">
+    <p className="text-destructive">{error.message}</p>
+    <Button onClick={refetch} variant="outline" className="mt-4">
+      다시 시도
+    </Button>
+  </div>
+)
+
+// 3. Empty
+if (!data?.length) return (
+  <div className="text-center p-8 text-muted-foreground">
+    <p>데이터가 없습니다</p>
+  </div>
+)
+
+// 4. Success
+return <DataList items={data} />
+```
+
+## Form Patterns
+
+Use controlled components with proper validation:
+
+```tsx
+const [email, setEmail] = useState('')
+const [error, setError] = useState('')
+
+const handleSubmit = (e: FormEvent) => {
+  e.preventDefault()
+  if (!email.includes('@')) {
+    setError('유효한 이메일을 입력하세요')
+    return
+  }
+  // Submit logic
+}
+
+<form onSubmit={handleSubmit}>
+  <Input
+    type="email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    placeholder="email@example.com"
+  />
+  {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+  <Button type="submit">제출</Button>
+</form>
+```
+
+### Validation Messages (Korean)
+- Required: "필수 항목입니다"
+- Email: "유효한 이메일을 입력하세요"
+- Min length: "{n}자 이상 입력하세요"
+- Password: "비밀번호는 8자 이상이어야 합니다"
+
+## Never Do
+
+- ❌ Inline styles (`style={{}}`)
+- ❌ Hardcoded colors (`#007bff`, `rgb()`)
+- ❌ Create new components without checking existing ones
+- ❌ Desktop-First styling
+- ❌ Touch targets smaller than 44px
+- ❌ Skip loading/error/empty states
+- ❌ Direct DOM manipulation
+- ❌ Use `any` type
+
+## Common Patterns
+
+### Loading Skeleton
+```tsx
+<div className="space-y-4">
+  <Skeleton className="h-8 w-48" />     {/* Title */}
+  <Skeleton className="h-4 w-full" />   {/* Line 1 */}
+  <Skeleton className="h-4 w-3/4" />    {/* Line 2 */}
+</div>
+```
+
+### Empty State
+```tsx
+<div className="flex flex-col items-center justify-center p-8 text-center">
+  <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+  <h3 className="font-semibold">소설이 없습니다</h3>
+  <p className="text-sm text-muted-foreground mt-1">
+    새 소설을 추가해보세요
+  </p>
+  <Button className="mt-4">소설 추가</Button>
+</div>
+```
+
+### Responsive Grid
+```tsx
+<div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+  {items.map(item => <Card key={item.id} />)}
+</div>
+```
+
+### Container
+```tsx
+<div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+  {children}
+</div>
+```

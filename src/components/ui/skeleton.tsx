@@ -1,13 +1,41 @@
 'use client';
 
+/**
+ * Skeleton Components
+ *
+ * A collection of skeleton loading components for various UI patterns.
+ * Use these components to show loading states that match the content shape.
+ *
+ * @module components/ui/skeleton
+ *
+ * @example
+ * // Basic skeleton
+ * <Skeleton className="h-4 w-full" />
+ *
+ * @example
+ * // Novel card loading
+ * <NovelCardSkeleton />
+ *
+ * @example
+ * // Grid of loading cards
+ * <NovelGridSkeleton count={6} />
+ */
+
 import { cn } from '@/lib/utils';
 
 interface SkeletonProps {
+  /** Additional CSS classes for custom sizing */
   className?: string;
 }
 
 /**
- * Basic skeleton component for loading states
+ * Basic skeleton component for loading states.
+ * Use className to control dimensions (h-*, w-*).
+ *
+ * @example
+ * <Skeleton className="h-8 w-48" />     // Title skeleton
+ * <Skeleton className="h-4 w-full" />   // Line skeleton
+ * <Skeleton className="h-32 w-32 rounded-full" /> // Avatar
  */
 export function Skeleton({ className }: SkeletonProps) {
   return (
