@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { TrendingUp, Clock, Star, BookOpen, ChevronRight, Sparkles, Crown } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
@@ -171,7 +172,13 @@ const mockNovels: (Novel & { author: Author })[] = [
   },
 ];
 
-function NovelCard({ novel }: { novel: Novel & { author: Author } }) {
+function NovelCard({
+  novel,
+  priority = false,
+}: {
+  novel: Novel & { author: Author };
+  priority?: boolean;
+}) {
   return (
     <Link href={`/novel/${novel.id}`} className="group">
       <motion.div
@@ -179,10 +186,13 @@ function NovelCard({ novel }: { novel: Novel & { author: Author } }) {
         className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
       >
         <div className="relative aspect-[3/4] overflow-hidden">
-          <img
+          <Image
             src={novel.coverUrl}
             alt={novel.title}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+            priority={priority}
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
           {novel.isExclusive ? (
             <Badge variant="exclusive" className="absolute left-2 top-2">
@@ -203,7 +213,7 @@ function NovelCard({ novel }: { novel: Novel & { author: Author } }) {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{novel.author.penName}</p>
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-0.5">
-              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" aria-hidden="true" />
               {novel.rating.toFixed(1)}
             </span>
             <span>{formatNumber(novel.viewCount)}회</span>
@@ -227,14 +237,14 @@ function HorizontalNovelCard({ novel, rank }: { novel: Novel & { author: Author 
         {rank}
       </div>
       <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-lg">
-        <img src={novel.coverUrl} alt={novel.title} className="h-full w-full object-cover" />
+        <Image src={novel.coverUrl} alt={novel.title} fill sizes="56px" className="object-cover" />
       </div>
       <div className="flex-1 overflow-hidden">
         <h4 className="line-clamp-1 font-medium text-gray-900 dark:text-white">{novel.title}</h4>
         <p className="text-sm text-gray-500 dark:text-gray-400">{novel.author.penName}</p>
         <div className="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-0.5">
-            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" aria-hidden="true" />
             {novel.rating.toFixed(1)}
           </span>
           <span>{formatNumber(novel.viewCount)}회</span>
@@ -337,8 +347,8 @@ export default function Home() {
 
             <TabsContent value="popular">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {mockNovels.map((novel) => (
-                  <NovelCard key={novel.id} novel={novel} />
+                {mockNovels.map((novel, index) => (
+                  <NovelCard key={novel.id} novel={novel} priority={index < 4} />
                 ))}
               </div>
             </TabsContent>

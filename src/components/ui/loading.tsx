@@ -9,11 +9,15 @@
  * - ContentLoader: Centered loader for content areas
  * - LoadingDots: Animated dots indicator
  * - TextPulse: Skeleton pulse for text placeholders
+ * - DelayedSpinner: Shows spinner after delay to prevent flash (Chapter 18 UX)
+ * - DelayedContentLoader: Content loader with delay (Chapter 18 UX)
  *
  * @module components/ui/loading
  */
 
 'use client';
+
+import { useState, useEffect } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -113,5 +117,94 @@ export function TextPulse({ width = 'w-24' }: { width?: string }) {
     <span
       className={cn('inline-block h-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700', width)}
     />
+  );
+}
+
+/**
+ * DelayedSpinner - Shows a spinner only after a delay (Chapter 18 UX Pattern)
+ *
+ * Prevents spinner flash for fast-loading content. If loading completes
+ * within the delay period, no spinner is shown at all.
+ *
+ * @param delay - Milliseconds to wait before showing spinner (default: 100ms)
+ * @param size - Spinner size variant
+ * @param className - Additional CSS classes
+ *
+ * @example
+ * // Show spinner only if loading takes > 100ms
+ * {isLoading && <DelayedSpinner />}
+ *
+ * @example
+ * // Custom delay of 200ms
+ * {isLoading && <DelayedSpinner delay={200} size="lg" />}
+ */
+export function DelayedSpinner({
+  delay = 100,
+  size = 'md',
+  className,
+}: {
+  delay?: number;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) {
+  const [showSpinner, setShowSpinner] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSpinner(true);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  if (!showSpinner) {
+    return null;
+  }
+
+  return <Spinner size={size} className={className} />;
+}
+
+/**
+ * DelayedContentLoader - Content area loader with delay (Chapter 18 UX Pattern)
+ *
+ * Combines DelayedSpinner with centered layout for content areas.
+ * Prevents layout shift by maintaining minimum height.
+ *
+ * @param delay - Milliseconds to wait before showing spinner (default: 100ms)
+ * @param text - Loading text to display
+ * @param className - Additional CSS classes
+ *
+ * @example
+ * {isLoading && <DelayedContentLoader text="소설 로딩 중..." />}
+ */
+export function DelayedContentLoader({
+  delay = 100,
+  text,
+  className,
+}: {
+  delay?: number;
+  text?: string;
+  className?: string;
+}) {
+  const [showLoader, setShowLoader] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLoader(true);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  if (!showLoader) {
+    // Return invisible placeholder to prevent layout shift
+    return <div className={cn('min-h-[200px]', className)} />;
+  }
+
+  return (
+    <div className={cn('flex min-h-[200px] flex-col items-center justify-center gap-3', className)}>
+      <Spinner size="md" />
+      {text ? <p className="text-sm text-gray-500 dark:text-gray-400">{text}</p> : null}
+    </div>
   );
 }

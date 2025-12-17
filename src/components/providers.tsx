@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { WebVitalsReporter } from '@/components/analytics/web-vitals-reporter';
 import { ToastProvider } from '@/components/ui/toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -20,7 +21,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        {/* Web Vitals monitoring (Chapter 18) */}
+        <WebVitalsReporter debug={process.env.NODE_ENV === 'development'} />
+        {children}
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

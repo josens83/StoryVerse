@@ -29,10 +29,12 @@ import {
   Settings,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useState, useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { formatNumber } from '@/lib/utils';
+import { useFocusTrap } from '@/hooks';
+import { cn, formatNumber } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 import { useCoinStore } from '@/store/coin-store';
 
@@ -40,12 +42,27 @@ import { useCoinStore } from '@/store/coin-store';
  * Sticky header with navigation, search, and user controls
  * Responsive design with mobile menu toggle
  */
+/** Navigation items configuration */
+const navItems = [
+  { href: '/ranking', icon: TrendingUp, label: '랭킹' },
+  { href: '/genre', icon: null, label: '장르' },
+  { href: '/bookshelf', icon: Library, label: '서재' },
+];
+
 export function Header() {
+  const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuthStore();
   const { totalCoins } = useCoinStore();
+
+  // Focus trap for search modal (Chapter 17 accessibility)
+  const searchModalRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(searchModalRef, isSearchOpen, {
+    onEscape: () => setIsSearchOpen(false),
+    initialFocus: 'input[type="text"]',
+  });
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -66,27 +83,29 @@ export function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-6 md:flex">
-          <Link
-            href="/ranking"
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-          >
-            <TrendingUp className="h-4 w-4" />
-            랭킹
-          </Link>
-          <Link
-            href="/genre"
-            className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-          >
-            장르
-          </Link>
-          <Link
-            href="/bookshelf"
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-          >
-            <Library className="h-4 w-4" />
-            서재
-          </Link>
+        <nav className="hidden items-center gap-6 md:flex" aria-label="메인 네비게이션">
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'flex items-center gap-1.5 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'text-orange-500'
+                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                )}
+              >
+                {Icon ? <Icon className="h-4 w-4" aria-hidden="true" /> : null}
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Right Section */}
@@ -214,7 +233,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* Search Modal */}
+      {/* Search Modal (Chapter 17 - Focus Trap & Accessibility) */}
       <AnimatePresence>
         {isSearchOpen ? (
           <motion.div
@@ -223,8 +242,13 @@ export function Header() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/50"
             onClick={() => setIsSearchOpen(false)}
+            aria-hidden="true"
           >
             <motion.div
+              ref={searchModalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="검색"
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
@@ -233,18 +257,19 @@ export function Header() {
             >
               <div className="rounded-2xl bg-white p-4 shadow-2xl dark:bg-gray-800">
                 <div className="flex items-center gap-3">
-                  <Search className="h-5 w-5 text-gray-400" />
+                  <Search className="h-5 w-5 text-gray-400" aria-hidden="true" />
                   <input
                     type="text"
                     placeholder="작품, 작가 검색..."
+                    aria-label="검색어 입력"
                     className="flex-1 bg-transparent text-lg outline-none placeholder:text-gray-400"
-                    autoFocus
                   />
                   <button
                     onClick={() => setIsSearchOpen(false)}
-                    className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    aria-label="검색창 닫기"
+                    className="min-h-11 min-w-11 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-5 w-5" aria-hidden="true" />
                   </button>
                 </div>
               </div>

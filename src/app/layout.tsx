@@ -47,9 +47,18 @@ export default function RootLayout({
     <html lang="ko">
       <body className="font-sans antialiased">
         <Providers>
+          {/* Skip link for keyboard navigation (Chapter 17) */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-orange-500 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+          >
+            본문으로 건너뛰기
+          </a>
           <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1 pb-16 md:pb-0">{children}</main>
+            <main id="main-content" className="flex-1 pb-16 md:pb-0">
+              {children}
+            </main>
             <Footer />
             <BottomNav />
           </div>
