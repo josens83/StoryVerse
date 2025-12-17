@@ -11635,7 +11635,1214 @@ axe DevTools 확장 설치:
 
 ## 챕터 18: 성능과 UX의 교차점
 
-> 작성 예정
+### 18.1 성능이 UX에 미치는 영향
+
+**성능은 기능입니다.** 아무리 멋진 UI도 느리면 사용자는 떠납니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              성능과 사용자 행동의 상관관계                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  로딩 시간과 이탈률:                                             │
+│  ─────────────────────                                          │
+│                                                                 │
+│  1초 → 3초:  이탈률 32% 증가                                    │
+│  1초 → 5초:  이탈률 90% 증가                                    │
+│  1초 → 6초:  이탈률 106% 증가                                   │
+│  1초 → 10초: 이탈률 123% 증가                                   │
+│                                                                 │
+│  (출처: Google/SOASTA Research, 2017)                           │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  비즈니스 영향:                                                  │
+│  ──────────────                                                 │
+│  • Amazon: 100ms 지연 → 매출 1% 감소                            │
+│  • Google: 500ms 지연 → 검색 20% 감소                           │
+│  • Walmart: 1초 개선 → 전환율 2% 증가                           │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  심리적 임계점:                                                  │
+│  ──────────────                                                 │
+│  • 0-100ms:   즉각적으로 느껴짐                                  │
+│  • 100-300ms: 약간의 지연 인지                                   │
+│  • 300-1000ms: "로딩 중"이라고 느낌                              │
+│  • 1초+:      사용자가 다른 생각을 시작                          │
+│  • 10초+:     사용자가 떠남                                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 18.2 Core Web Vitals 이해하기
+
+**Core Web Vitals**는 Google이 정의한 사용자 경험의 핵심 지표입니다. **SEO 순위에 직접 영향**을 미칩니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Core Web Vitals (2024)                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. LCP (Largest Contentful Paint)                              │
+│  ─────────────────────────────────                              │
+│  "가장 큰 콘텐츠가 보이기까지 시간"                              │
+│                                                                 │
+│  측정: 뷰포트 내 가장 큰 이미지/텍스트 블록 렌더링 시간          │
+│                                                                 │
+│  ✅ Good:      ≤ 2.5초                                          │
+│  ⚠️ Needs Improvement: 2.5초 ~ 4초                              │
+│  ❌ Poor:      > 4초                                            │
+│                                                                 │
+│  영향 요소: 서버 응답 시간, 리소스 로딩, 렌더링 차단             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  2. INP (Interaction to Next Paint)                             │
+│  ─────────────────────────────────                              │
+│  "인터랙션 후 화면 반응까지 시간"                                │
+│  (2024년 3월부터 FID 대체)                                       │
+│                                                                 │
+│  측정: 클릭/탭/키 입력 후 시각적 피드백까지 시간                 │
+│                                                                 │
+│  ✅ Good:      ≤ 200ms                                          │
+│  ⚠️ Needs Improvement: 200ms ~ 500ms                            │
+│  ❌ Poor:      > 500ms                                          │
+│                                                                 │
+│  영향 요소: JavaScript 실행 시간, 메인 스레드 블로킹             │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  3. CLS (Cumulative Layout Shift)                               │
+│  ─────────────────────────────────                              │
+│  "예기치 않은 레이아웃 이동 정도"                                │
+│                                                                 │
+│  측정: 페이지 수명 동안 누적된 레이아웃 이동 점수                │
+│                                                                 │
+│  ✅ Good:      ≤ 0.1                                            │
+│  ⚠️ Needs Improvement: 0.1 ~ 0.25                               │
+│  ❌ Poor:      > 0.25                                           │
+│                                                                 │
+│  영향 요소: 크기 없는 이미지, 동적 콘텐츠 삽입, 웹폰트 FOUT      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 18.3 LCP 최적화
+
+**LCP 요소가 될 수 있는 것들:**
+
+- `<img>` 요소
+- `<video>` 포스터 이미지
+- CSS `background-image`
+- 텍스트가 포함된 블록 요소
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// Next.js Image 최적화
+// ═══════════════════════════════════════════════════════════════
+
+import Image from 'next/image'
+
+// ❌ 최적화되지 않은 이미지
+<img src="/hero.jpg" alt="Hero" />
+
+// ✅ Next.js Image 컴포넌트 사용
+<Image
+  src="/hero.jpg"
+  alt="Hero"
+  width={1200}
+  height={600}
+  priority  // LCP 이미지에 필수!
+/>
+
+// ═══════════════════════════════════════════════════════════════
+// priority 속성의 중요성
+// ═══════════════════════════════════════════════════════════════
+
+// priority가 하는 일:
+// 1. preload 링크 자동 생성
+// 2. lazy loading 비활성화
+// 3. fetchPriority="high" 설정
+
+// 히어로 이미지 (LCP 후보)
+<Image
+  src="/hero.jpg"
+  alt="메인 배너"
+  fill
+  priority                    // ← 필수!
+  sizes="100vw"
+  className="object-cover"
+/>
+
+// 스크롤 아래 이미지 (lazy loading 유지)
+<Image
+  src="/below-fold.jpg"
+  alt="하단 이미지"
+  width={800}
+  height={600}
+  // priority 없음 = lazy loading
+/>
+
+// ═══════════════════════════════════════════════════════════════
+// 이미지 포맷 최적화 (next.config.js)
+// ═══════════════════════════════════════════════════════════════
+
+// next.config.js
+module.exports = {
+  images: {
+    formats: ['image/avif', 'image/webp'],  // 최신 포맷 우선
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    minimumCacheTTL: 60 * 60 * 24 * 30,  // 30일 캐시
+  },
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 서버 응답 시간 개선
+// ═══════════════════════════════════════════════════════════════
+
+// 1. 정적 생성 (SSG) 활용 - 가장 빠름
+// app/page.tsx
+export const dynamic = 'force-static'  // 빌드 시 생성
+
+// 2. ISR (Incremental Static Regeneration)
+export const revalidate = 3600  // 1시간마다 재생성
+
+// 3. 스트리밍 SSR (느린 데이터 대응)
+import { Suspense } from 'react'
+
+export default function Page() {
+  return (
+    <>
+      {/* 즉시 렌더링되는 부분 */}
+      <header>...</header>
+      <HeroSection />
+
+      {/* 느린 데이터는 나중에 */}
+      <Suspense fallback={<ProductsSkeleton />}>
+        <ProductList />  {/* 서버 컴포넌트 */}
+      </Suspense>
+    </>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 폰트 최적화
+// ═══════════════════════════════════════════════════════════════
+
+// app/layout.tsx
+import { Inter } from 'next/font/google'
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',        // FOUT 방지
+  preload: true,          // 프리로드
+  variable: '--font-inter',
+})
+
+export default function RootLayout({ children }) {
+  return (
+    <html className={inter.variable}>
+      <body>{children}</body>
+    </html>
+  )
+}
+```
+
+### 18.4 INP 최적화
+
+**INP(Interaction to Next Paint)**는 사용자 인터랙션에 대한 응답성을 측정합니다.
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 무거운 JavaScript 분리
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 모든 코드가 초기 번들에 포함
+import HeavyChart from './HeavyChart'
+
+// ✅ 동적 임포트로 코드 분할
+import dynamic from 'next/dynamic'
+
+const HeavyChart = dynamic(() => import('./HeavyChart'), {
+  loading: () => <ChartSkeleton />,
+  ssr: false,  // 클라이언트에서만 로드
+})
+
+// ═══════════════════════════════════════════════════════════════
+// 이벤트 핸들러 최적화
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 무거운 작업을 동기적으로 실행
+function handleClick() {
+  const result = heavyComputation()  // 메인 스레드 블로킹!
+  setData(result)
+}
+
+// ✅ 무거운 작업을 비동기로 분리
+function handleClick() {
+  // 즉각적인 시각적 피드백
+  setIsLoading(true)
+
+  // 무거운 작업은 다음 프레임에
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const result = heavyComputation()
+      setData(result)
+      setIsLoading(false)
+    }, 0)
+  })
+}
+
+// ✅ 더 나은 방법: Web Worker 사용
+// worker.ts
+self.onmessage = (e) => {
+  const result = heavyComputation(e.data)
+  self.postMessage(result)
+}
+
+// component.tsx
+const worker = new Worker(new URL('./worker.ts', import.meta.url))
+
+function handleClick() {
+  setIsLoading(true)
+  worker.postMessage(inputData)
+}
+
+worker.onmessage = (e) => {
+  setData(e.data)
+  setIsLoading(false)
+}
+
+// ═══════════════════════════════════════════════════════════════
+// useTransition으로 긴급하지 않은 업데이트 분리
+// ═══════════════════════════════════════════════════════════════
+
+'use client'
+
+import { useState, useTransition } from 'react'
+
+function SearchComponent() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [isPending, startTransition] = useTransition()
+
+  const handleSearch = (e) => {
+    const value = e.target.value
+
+    // 긴급: 입력 필드 업데이트 (즉시)
+    setQuery(value)
+
+    // 긴급하지 않음: 검색 결과 업데이트 (나중에)
+    startTransition(() => {
+      const filtered = filterItems(value)  // 무거운 작업
+      setResults(filtered)
+    })
+  }
+
+  return (
+    <>
+      <input
+        value={query}
+        onChange={handleSearch}
+        placeholder="검색..."
+      />
+      {isPending && <span>검색 중...</span>}
+      <ResultsList results={results} />
+    </>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// useDeferredValue로 느린 컴포넌트 처리
+// ═══════════════════════════════════════════════════════════════
+
+'use client'
+
+import { useDeferredValue, memo } from 'react'
+
+function SearchPage() {
+  const [query, setQuery] = useState('')
+  const deferredQuery = useDeferredValue(query)
+
+  // query가 변경되어도 deferredQuery는 지연되어 업데이트
+  const isStale = query !== deferredQuery
+
+  return (
+    <>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <div style={{ opacity: isStale ? 0.5 : 1 }}>
+        <SlowResults query={deferredQuery} />
+      </div>
+    </>
+  )
+}
+
+// 메모이제이션으로 불필요한 리렌더 방지
+const SlowResults = memo(function SlowResults({ query }) {
+  const results = searchItems(query)  // 느린 작업
+  return <ul>{results.map(...)}</ul>
+})
+```
+
+### 18.5 CLS 최적화
+
+**CLS(Cumulative Layout Shift)**는 예기치 않은 레이아웃 이동을 측정합니다.
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 이미지/비디오 크기 예약
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 크기 없는 이미지 (CLS 발생!)
+<img src="/photo.jpg" alt="Photo" />
+
+// ✅ 명시적 크기 지정
+<img
+  src="/photo.jpg"
+  alt="Photo"
+  width={800}
+  height={600}
+/>
+
+// ✅ Next.js Image (자동 크기 예약)
+<Image
+  src="/photo.jpg"
+  alt="Photo"
+  width={800}
+  height={600}
+/>
+
+// ✅ 비율 유지 컨테이너
+<div className="relative aspect-video">
+  <Image
+    src="/video-thumb.jpg"
+    alt="Video thumbnail"
+    fill
+    className="object-cover"
+  />
+</div>
+
+// ═══════════════════════════════════════════════════════════════
+// 동적 콘텐츠 공간 예약
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 광고/배너가 로드되면서 레이아웃 밀림
+<div>
+  <AdBanner />  {/* 로드 후 200px 차지 */}
+  <Content />
+</div>
+
+// ✅ 최소 높이로 공간 예약
+<div className="min-h-[200px]">
+  <AdBanner />
+</div>
+<Content />
+
+// ✅ 또는 Skeleton으로 공간 예약
+<div className="h-[200px]">
+  {isLoading ? <Skeleton className="h-full" /> : <AdBanner />}
+</div>
+
+// ═══════════════════════════════════════════════════════════════
+// 폰트 로딩 CLS 방지
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ FOUT (Flash of Unstyled Text)
+@font-face {
+  font-family: 'CustomFont';
+  src: url('/font.woff2');
+  /* font-display 없음 */
+}
+
+// ✅ font-display: swap (텍스트 즉시 표시, 폰트 로드 후 교체)
+@font-face {
+  font-family: 'CustomFont';
+  src: url('/font.woff2');
+  font-display: swap;
+}
+
+// ✅ font-display: optional (빠르면 사용, 아니면 시스템 폰트)
+@font-face {
+  font-family: 'CustomFont';
+  src: url('/font.woff2');
+  font-display: optional;
+}
+
+// ✅ Next.js 폰트 최적화 (자동 처리)
+import { Noto_Sans_KR } from 'next/font/google'
+
+const notoSansKr = Noto_Sans_KR({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  adjustFontFallback: true,  // 폴백 폰트 크기 조정
+})
+
+// ═══════════════════════════════════════════════════════════════
+// 동적 삽입 콘텐츠 처리
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 콘텐츠 위에 갑자기 알림 삽입
+<div>
+  {showNotification && <Notification />}  {/* 아래 콘텐츠 밀림! */}
+  <MainContent />
+</div>
+
+// ✅ 고정 위치 사용 (레이아웃 영향 없음)
+<div className="relative">
+  {showNotification && (
+    <div className="fixed top-4 right-4 z-50">
+      <Notification />
+    </div>
+  )}
+  <MainContent />
+</div>
+
+// ✅ 또는 transform으로 애니메이션 (레이아웃 트리거 안 함)
+<motion.div
+  initial={{ opacity: 0, y: -20 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="fixed top-4 right-4"
+>
+  <Notification />
+</motion.div>
+```
+
+### 18.6 로딩 UX 전략
+
+**체감 성능(Perceived Performance)**은 실제 성능만큼 중요합니다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   로딩 UX 전략 선택 가이드                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  로딩 시간        권장 전략                                      │
+│  ────────────    ─────────────────────────────────────          │
+│                                                                 │
+│  < 100ms         아무것도 표시하지 않음 (즉각적으로 느껴짐)      │
+│                                                                 │
+│  100ms - 1초     미묘한 인디케이터 (버튼 내 스피너)              │
+│                                                                 │
+│  1초 - 3초       Skeleton UI (콘텐츠 구조 미리보기)              │
+│                                                                 │
+│  3초+            진행률 표시 + 예상 시간                         │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  💡 핵심 원칙:                                                   │
+│  1. 100ms 이전에는 로딩 표시하지 않기 (깜빡임 방지)              │
+│  2. 콘텐츠 구조가 예측 가능하면 Skeleton 사용                    │
+│  3. 진행 상황을 알 수 있으면 Progress Bar 사용                   │
+│  4. 완료 후 부드러운 전환 애니메이션                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Progressive Loading 패턴:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 점진적 콘텐츠 로딩
+// ═══════════════════════════════════════════════════════════════
+
+// app/page.tsx
+import { Suspense } from 'react';
+
+export default function Page() {
+  return (
+    <>
+      {/* 1. 즉시 렌더링 (Critical) */}
+      <Header />
+      <HeroSection />
+
+      {/* 2. 두 번째로 중요 */}
+      <Suspense fallback={<ProductsSkeleton />}>
+        <FeaturedProducts />
+      </Suspense>
+
+      {/* 3. 덜 중요한 콘텐츠 */}
+      <Suspense fallback={<ReviewsSkeleton />}>
+        <CustomerReviews />
+      </Suspense>
+
+      {/* 4. 가장 덜 중요 */}
+      <Suspense fallback={<RecommendationsSkeleton />}>
+        <Recommendations />
+      </Suspense>
+
+      <Footer />
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 지연 로딩 표시기 (100ms 후에만 표시)
+// ═══════════════════════════════════════════════════════════════
+
+('use client');
+
+import { useState, useEffect } from 'react';
+
+function DelayedSpinner({ delay = 100, children }) {
+  const [showSpinner, setShowSpinner] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSpinner(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  if (!showSpinner) return null;
+  return children;
+}
+
+// 사용
+function LoadingState() {
+  return (
+    <DelayedSpinner delay={100}>
+      <Spinner />
+    </DelayedSpinner>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Optimistic UI (낙관적 업데이트)
+// ═══════════════════════════════════════════════════════════════
+
+('use client');
+
+import { useOptimistic, useTransition } from 'react';
+
+function LikeButton({ postId, initialLiked, initialCount }) {
+  const [isPending, startTransition] = useTransition();
+  const [optimisticState, setOptimisticState] = useOptimistic(
+    { liked: initialLiked, count: initialCount },
+    (state, newLiked) => ({
+      liked: newLiked,
+      count: newLiked ? state.count + 1 : state.count - 1,
+    })
+  );
+
+  const handleLike = async () => {
+    const newLiked = !optimisticState.liked;
+
+    startTransition(async () => {
+      // 1. 즉시 UI 업데이트 (Optimistic)
+      setOptimisticState(newLiked);
+
+      // 2. 서버에 요청
+      try {
+        await toggleLike(postId, newLiked);
+      } catch (error) {
+        // 3. 실패 시 롤백 (자동으로 원래 상태로)
+        console.error('좋아요 실패');
+      }
+    });
+  };
+
+  return (
+    <button onClick={handleLike} disabled={isPending}>
+      <Heart filled={optimisticState.liked} />
+      <span>{optimisticState.count}</span>
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 무한 스크롤 최적화
+// ═══════════════════════════════════════════════════════════════
+
+('use client');
+
+import { useInView } from 'react-intersection-observer';
+import { useInfiniteQuery } from '@tanstack/react-query';
+
+function InfiniteList() {
+  const { ref, inView } = useInView();
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['items'],
+    queryFn: ({ pageParam = 0 }) => fetchItems(pageParam),
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  });
+
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  return (
+    <>
+      {data?.pages.map((page, i) => (
+        <div key={i}>
+          {page.items.map((item) => (
+            <ItemCard key={item.id} item={item} />
+          ))}
+        </div>
+      ))}
+
+      {/* 트리거 요소 */}
+      <div ref={ref} className="h-10">
+        {isFetchingNextPage && <Spinner />}
+      </div>
+    </>
+  );
+}
+```
+
+### 18.7 프리페칭과 프리로딩
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// Next.js Link 프리페칭
+// ═══════════════════════════════════════════════════════════════
+
+import Link from 'next/link'
+
+// 기본: 뷰포트에 들어오면 자동 프리페치
+<Link href="/about">About</Link>
+
+// 프리페치 비활성화 (드물게 사용되는 페이지)
+<Link href="/terms" prefetch={false}>
+  이용약관
+</Link>
+
+// 호버 시 프리페치 (App Router 기본값)
+<Link href="/product/123">
+  상품 보기
+</Link>
+
+// ═══════════════════════════════════════════════════════════════
+// 프로그래매틱 프리페칭
+// ═══════════════════════════════════════════════════════════════
+
+'use client'
+
+import { useRouter } from 'next/navigation'
+
+function ProductCard({ product }) {
+  const router = useRouter()
+
+  // 마우스 오버 시 페이지 프리페치
+  const handleMouseEnter = () => {
+    router.prefetch(`/product/${product.id}`)
+  }
+
+  return (
+    <div onMouseEnter={handleMouseEnter}>
+      <Link href={`/product/${product.id}`}>
+        {product.name}
+      </Link>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 리소스 프리로드
+// ═══════════════════════════════════════════════════════════════
+
+// app/layout.tsx
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <head>
+        {/* 중요 이미지 프리로드 */}
+        <link
+          rel="preload"
+          href="/hero.jpg"
+          as="image"
+          type="image/jpeg"
+        />
+
+        {/* 중요 폰트 프리로드 */}
+        <link
+          rel="preload"
+          href="/fonts/custom.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+
+        {/* API 도메인 프리커넥트 */}
+        <link rel="preconnect" href="https://api.example.com" />
+        <link rel="dns-prefetch" href="https://api.example.com" />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// React Query 데이터 프리페칭
+// ═══════════════════════════════════════════════════════════════
+
+import { useQueryClient } from '@tanstack/react-query'
+
+function CategoryList({ categories }) {
+  const queryClient = useQueryClient()
+
+  const prefetchCategory = (categoryId) => {
+    queryClient.prefetchQuery({
+      queryKey: ['products', categoryId],
+      queryFn: () => fetchProducts(categoryId),
+      staleTime: 5 * 60 * 1000,  // 5분간 유효
+    })
+  }
+
+  return (
+    <ul>
+      {categories.map(category => (
+        <li
+          key={category.id}
+          onMouseEnter={() => prefetchCategory(category.id)}
+        >
+          <Link href={`/category/${category.id}`}>
+            {category.name}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 이미지 프리로딩
+// ═══════════════════════════════════════════════════════════════
+
+// 이미지 갤러리에서 다음 이미지 프리로드
+function ImageGallery({ images, currentIndex }) {
+  useEffect(() => {
+    // 다음 이미지 프리로드
+    const nextIndex = currentIndex + 1
+    if (nextIndex < images.length) {
+      const img = new Image()
+      img.src = images[nextIndex].src
+    }
+
+    // 이전 이미지도 프리로드
+    const prevIndex = currentIndex - 1
+    if (prevIndex >= 0) {
+      const img = new Image()
+      img.src = images[prevIndex].src
+    }
+  }, [currentIndex, images])
+
+  return <img src={images[currentIndex].src} alt="" />
+}
+```
+
+### 18.8 성능 측정 도구
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    성능 측정 도구 가이드                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  개발 중 (Lab Data):                                             │
+│  ─────────────────────                                          │
+│                                                                 │
+│  Chrome DevTools                                                │
+│  • Performance 탭: 상세 프로파일링                               │
+│  • Lighthouse 탭: 종합 점수                                      │
+│  • Network 탭: 리소스 로딩 분석                                  │
+│                                                                 │
+│  Web Vitals Extension                                            │
+│  • 실시간 Core Web Vitals 표시                                   │
+│  • Chrome 확장 프로그램                                          │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  프로덕션 (Field Data):                                          │
+│  ───────────────────────                                        │
+│                                                                 │
+│  Google Search Console                                          │
+│  • Core Web Vitals 리포트                                        │
+│  • 실제 사용자 데이터                                            │
+│  • 무료                                                          │
+│                                                                 │
+│  PageSpeed Insights                                              │
+│  • Lab + Field 데이터 통합                                       │
+│  • 개선 제안 포함                                                │
+│  • web.dev/measure                                               │
+│                                                                 │
+│  Vercel Analytics                                                │
+│  • Next.js 통합                                                  │
+│  • 실시간 모니터링                                               │
+│  • 무료 티어 제공                                                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**코드에서 성능 측정:**
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// Web Vitals 측정 및 리포팅
+// ═══════════════════════════════════════════════════════════════
+
+// app/layout.tsx
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/react';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <SpeedInsights /> {/* Core Web Vitals 자동 수집 */}
+        <Analytics /> {/* 페이지뷰 분석 */}
+      </body>
+    </html>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 커스텀 Web Vitals 리포팅
+// ═══════════════════════════════════════════════════════════════
+
+// app/web-vitals.tsx
+('use client');
+
+import { useReportWebVitals } from 'next/web-vitals';
+
+export function WebVitalsReporter() {
+  useReportWebVitals((metric) => {
+    // 분석 서비스로 전송
+    console.log(metric);
+
+    // 예: Google Analytics로 전송
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', metric.name, {
+        value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
+        event_label: metric.id,
+        non_interaction: true,
+      });
+    }
+  });
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 컴포넌트 렌더링 성능 측정
+// ═══════════════════════════════════════════════════════════════
+
+// React DevTools Profiler 사용
+// 또는 수동 측정:
+
+('use client');
+
+import { Profiler } from 'react';
+
+function onRenderCallback(
+  id, // 프로파일러 ID
+  phase, // "mount" 또는 "update"
+  actualDuration, // 렌더링 시간
+  baseDuration, // 메모이제이션 없을 때 예상 시간
+  startTime, // 렌더링 시작 시간
+  commitTime // 커밋 시간
+) {
+  console.log(`${id} ${phase}: ${actualDuration}ms`);
+
+  // 느린 렌더링 경고
+  if (actualDuration > 16) {
+    // 60fps = 16ms/frame
+    console.warn(`Slow render: ${id} took ${actualDuration}ms`);
+  }
+}
+
+function App() {
+  return (
+    <Profiler id="App" onRender={onRenderCallback}>
+      <MainContent />
+    </Profiler>
+  );
+}
+```
+
+### 18.9 번들 크기 최적화
+
+```bash
+# 번들 분석
+npm install --save-dev @next/bundle-analyzer
+
+# next.config.js
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
+module.exports = withBundleAnalyzer({
+  // 기존 설정
+})
+
+# 분석 실행
+ANALYZE=true npm run build
+```
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// 동적 임포트로 코드 분할
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 모든 아이콘이 번들에 포함
+import * as Icons from 'lucide-react'
+
+// ✅ 필요한 아이콘만 임포트
+import { Home, Settings, User } from 'lucide-react'
+
+// ═══════════════════════════════════════════════════════════════
+// 무거운 라이브러리 지연 로딩
+// ═══════════════════════════════════════════════════════════════
+
+// ❌ 초기 번들에 포함
+import { Chart } from 'chart.js'
+
+// ✅ 필요할 때 로드
+const loadChart = async () => {
+  const { Chart } = await import('chart.js')
+  return Chart
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 조건부 로딩
+// ═══════════════════════════════════════════════════════════════
+
+// 관리자만 필요한 기능
+const AdminPanel = dynamic(
+  () => import('./AdminPanel'),
+  {
+    loading: () => <Spinner />,
+    ssr: false,
+  }
+)
+
+function Dashboard({ isAdmin }) {
+  return (
+    <div>
+      <UserDashboard />
+      {isAdmin && <AdminPanel />}  {/* 관리자만 로드 */}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Tree Shaking 확인
+// ═══════════════════════════════════════════════════════════════
+
+// package.json - sideEffects 확인
+{
+  "sideEffects": false,  // 또는 특정 파일 배열
+}
+
+// ❌ 전체 임포트
+import _ from 'lodash'
+_.debounce(fn, 300)
+
+// ✅ 개별 함수 임포트
+import debounce from 'lodash/debounce'
+debounce(fn, 300)
+
+// 또는 lodash-es 사용
+import { debounce } from 'lodash-es'
+```
+
+### 18.10 캐싱 전략
+
+```tsx
+// ═══════════════════════════════════════════════════════════════
+// Next.js 캐싱 설정
+// ═══════════════════════════════════════════════════════════════
+
+// 정적 페이지 (무한 캐시)
+// app/about/page.tsx
+export const dynamic = 'force-static';
+
+// ISR (주기적 재검증)
+// app/products/page.tsx
+export const revalidate = 3600; // 1시간
+
+// 온디맨드 재검증
+// app/api/revalidate/route.ts
+import { revalidatePath, revalidateTag } from 'next/cache';
+
+export async function POST(request: Request) {
+  const { path, tag } = await request.json();
+
+  if (path) {
+    revalidatePath(path);
+  }
+  if (tag) {
+    revalidateTag(tag);
+  }
+
+  return Response.json({ revalidated: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// fetch 캐싱 (서버 컴포넌트)
+// ═══════════════════════════════════════════════════════════════
+
+// 기본: 무한 캐시
+const data = await fetch('https://api.example.com/data');
+
+// 캐시 없음
+const data = await fetch('https://api.example.com/data', {
+  cache: 'no-store',
+});
+
+// 시간 기반 재검증
+const data = await fetch('https://api.example.com/data', {
+  next: { revalidate: 3600 }, // 1시간
+});
+
+// 태그 기반 재검증
+const data = await fetch('https://api.example.com/products', {
+  next: { tags: ['products'] },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// React Query 캐싱
+// ═══════════════════════════════════════════════════════════════
+
+const { data } = useQuery({
+  queryKey: ['products'],
+  queryFn: fetchProducts,
+  staleTime: 5 * 60 * 1000, // 5분간 fresh
+  gcTime: 30 * 60 * 1000, // 30분간 캐시 유지 (cacheTime → gcTime)
+  refetchOnWindowFocus: false, // 포커스 시 재요청 비활성화
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Service Worker 캐싱 (PWA)
+// ═══════════════════════════════════════════════════════════════
+
+// next.config.js
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/api\.example\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'api-cache',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60 * 24, // 1일
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'image-cache',
+        expiration: {
+          maxEntries: 200,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30일
+        },
+      },
+    },
+  ],
+});
+
+module.exports = withPWA({
+  // 기존 설정
+});
+```
+
+### 18.11 AI에게 성능 최적화 요청하는 프롬프트
+
+```markdown
+## 성능 최적화 요청 프롬프트
+
+다음 컴포넌트/페이지의 성능을 최적화해줘: [대상]
+
+### Core Web Vitals 목표
+
+- LCP: ≤ 2.5초
+- INP: ≤ 200ms
+- CLS: ≤ 0.1
+
+### 최적화 요구사항
+
+**LCP:**
+
+- 히어로/LCP 이미지에 priority 속성
+- 이미지 포맷 최적화 (WebP/AVIF)
+- 서버 응답 시간 최소화
+- Critical CSS 인라인
+
+**INP:**
+
+- 무거운 JavaScript 동적 임포트
+- useTransition/useDeferredValue 활용
+- 이벤트 핸들러 최적화
+
+**CLS:**
+
+- 이미지/비디오 크기 명시
+- 폰트 font-display: swap
+- 동적 콘텐츠 공간 예약
+
+### 추가 요구사항
+
+- 번들 크기 최소화
+- 적절한 캐싱 전략
+- Suspense로 점진적 로딩
+- React Query/SWR 캐싱 활용
+```
+
+### 18.12 성능 최적화 체크리스트
+
+```
+□ LCP 최적화
+  - [ ] LCP 이미지에 priority 속성
+  - [ ] 이미지 포맷 최적화 (WebP/AVIF)
+  - [ ] 이미지 크기 최적화 (sizes 속성)
+  - [ ] 서버 응답 시간 < 200ms
+  - [ ] 폰트 프리로드
+
+□ INP 최적화
+  - [ ] 무거운 라이브러리 동적 임포트
+  - [ ] useTransition으로 긴급하지 않은 업데이트 분리
+  - [ ] 이벤트 핸들러 최적화
+  - [ ] 메인 스레드 블로킹 최소화
+
+□ CLS 최적화
+  - [ ] 모든 이미지/비디오에 크기 지정
+  - [ ] 폰트 font-display 설정
+  - [ ] 동적 콘텐츠 공간 예약
+  - [ ] 상단에 콘텐츠 삽입 금지
+
+□ 로딩 UX
+  - [ ] Suspense로 점진적 로딩
+  - [ ] Skeleton UI 적용
+  - [ ] 100ms 지연 로딩 표시기
+  - [ ] Optimistic UI 적용
+
+□ 캐싱
+  - [ ] 정적 페이지 SSG/ISR 활용
+  - [ ] fetch 캐싱 설정
+  - [ ] React Query staleTime 설정
+  - [ ] 이미지 CDN 캐싱
+
+□ 번들 최적화
+  - [ ] 동적 임포트 활용
+  - [ ] Tree shaking 확인
+  - [ ] 번들 분석 및 최적화
+  - [ ] 불필요한 폴리필 제거
+```
+
+### 18.13 다음 챕터 미리보기
+
+**챕터 19: UI 프롬프트 엔지니어링 마스터**에서는 AI에게 UI 컴포넌트를 효과적으로 요청하는 프롬프트 패턴, 반복적 개선 전략, 참조 이미지 활용법 등 바이브 코딩의 핵심 기술을 심층적으로 다룹니다.
 
 ---
 
