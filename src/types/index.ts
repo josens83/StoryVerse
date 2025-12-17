@@ -591,3 +591,207 @@ export interface ActivityItem {
   metadata?: Record<string, unknown>;
   createdAt: Date;
 }
+
+// ========================================
+// Phase 3: Analytics, Events & Community
+// ========================================
+
+// Reading Analytics Types
+export interface ReadingStats {
+  userId: string;
+  totalNovels: number;
+  totalChapters: number;
+  totalWords: number;
+  totalReadTime: number; // in minutes
+  averageReadSpeed: number; // words per minute
+  longestStreak: number; // consecutive days
+  currentStreak: number;
+  favoriteGenres: { genre: Genre; count: number; percentage: number }[];
+  readingByHour: { hour: number; minutes: number }[];
+  readingByDay: { day: string; minutes: number }[];
+  monthlyProgress: { month: string; chapters: number; words: number }[];
+  achievements: UserAchievement[];
+  rank: {
+    overall: number;
+    percentile: number;
+    tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  };
+}
+
+export interface UserAchievement {
+  id: string;
+  achievementId: string;
+  achievement: Achievement;
+  unlockedAt: Date;
+  progress?: number;
+  maxProgress?: number;
+}
+
+export interface ReadingGoal {
+  id: string;
+  userId: string;
+  type: 'daily' | 'weekly' | 'monthly';
+  target: number; // chapters or minutes
+  unit: 'chapters' | 'minutes';
+  current: number;
+  startDate: Date;
+  endDate: Date;
+  isCompleted: boolean;
+  rewardCoins?: number;
+}
+
+// Event System Types
+export type EventType = 'limited' | 'seasonal' | 'milestone' | 'collaboration' | 'anniversary';
+export type EventStatus = 'upcoming' | 'active' | 'ended';
+
+export interface Event {
+  id: string;
+  type: EventType;
+  title: string;
+  description: string;
+  bannerUrl: string;
+  startDate: Date;
+  endDate: Date;
+  status: EventStatus;
+  rewards: EventReward[];
+  requirements?: EventRequirement[];
+  participants?: number;
+  maxParticipants?: number;
+}
+
+export interface EventReward {
+  id: string;
+  type: 'coins' | 'badge' | 'chapter_unlock' | 'vip_days' | 'exclusive_content';
+  name: string;
+  description: string;
+  value: number;
+  iconUrl?: string;
+}
+
+export interface EventRequirement {
+  type: 'read_chapters' | 'spend_coins' | 'daily_login' | 'comment' | 'share';
+  target: number;
+  current?: number;
+}
+
+export interface EventParticipation {
+  id: string;
+  userId: string;
+  eventId: string;
+  progress: EventRequirement[];
+  rewardsEarned: string[];
+  joinedAt: Date;
+  completedAt?: Date;
+}
+
+// Community Types
+export type ForumCategory =
+  | 'general'
+  | 'recommendations'
+  | 'reviews'
+  | 'fanart'
+  | 'theories'
+  | 'author_qna';
+
+export interface ForumPost {
+  id: string;
+  userId: string;
+  user?: User;
+  category: ForumCategory;
+  novelId?: string;
+  novel?: Novel;
+  title: string;
+  content: string;
+  imageUrls?: string[];
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  isLiked?: boolean;
+  isPinned: boolean;
+  isLocked: boolean;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ForumComment {
+  id: string;
+  postId: string;
+  userId: string;
+  user?: User;
+  parentId?: string;
+  content: string;
+  likeCount: number;
+  isLiked?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FanArt {
+  id: string;
+  userId: string;
+  user?: User;
+  novelId: string;
+  novel?: Novel;
+  title: string;
+  description?: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  likeCount: number;
+  viewCount: number;
+  isLiked?: boolean;
+  tags: string[];
+  createdAt: Date;
+}
+
+// Advanced Reader Types
+export interface TTSSettings {
+  enabled: boolean;
+  voice: string;
+  speed: number; // 0.5 - 2.0
+  pitch: number; // 0.5 - 2.0
+  volume: number; // 0 - 1
+  autoPlay: boolean;
+  highlightText: boolean;
+}
+
+export interface DictionaryEntry {
+  word: string;
+  reading?: string; // for languages with multiple readings
+  definitions: {
+    partOfSpeech: string;
+    meaning: string;
+    examples?: string[];
+  }[];
+  synonyms?: string[];
+  relatedWords?: string[];
+}
+
+export interface Bookmark {
+  id: string;
+  userId: string;
+  novelId: string;
+  chapterId: string;
+  position: number; // character position in chapter
+  note?: string;
+  color?: string;
+  createdAt: Date;
+}
+
+export interface Highlight {
+  id: string;
+  userId: string;
+  novelId: string;
+  chapterId: string;
+  startPosition: number;
+  endPosition: number;
+  text: string;
+  note?: string;
+  color: string;
+  createdAt: Date;
+}
+
+export interface ReaderAnnotation {
+  bookmarks: Bookmark[];
+  highlights: Highlight[];
+}
