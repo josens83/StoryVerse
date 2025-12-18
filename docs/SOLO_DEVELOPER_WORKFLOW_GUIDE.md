@@ -801,6 +801,10 @@ vercel dev
 □ vercel build 또는 로컬 프로덕션 빌드 성공
 ```
 
+### 3.10 다음 챕터 미리보기
+
+**챕터 4: Prisma 타입 문제 해결 및 최적화**에서는 Prisma Client 생성 문제, Connection Pooling, Serverless 환경 최적화를 다룹니다. `Cannot find module '@prisma/client'` 오류를 완전히 해결하는 방법을 배웁니다.
+
 ---
 
 ## 챕터 4: Prisma 타입 문제 해결 및 최적화
@@ -1264,6 +1268,10 @@ generator client {
   }
 }
 ```
+
+### 4.12 다음 챕터 미리보기
+
+**챕터 5: CI/CD 파이프라인 구축**에서는 GitHub Actions를 활용한 자동화된 테스트, 린트, 빌드 파이프라인을 구축합니다. 배포 전 모든 검증을 자동으로 수행하여 실수를 방지합니다.
 
 ---
 
