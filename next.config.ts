@@ -51,7 +51,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Image optimization
+  // Image optimization (Chapter 18 - Performance)
   images: {
     remotePatterns: [
       {
@@ -68,6 +68,11 @@ const nextConfig: NextConfig = {
       },
     ],
     formats: ['image/avif', 'image/webp'],
+    // Responsive image sizes for srcset
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Cache optimized images for 30 days
+    minimumCacheTTL: 60 * 60 * 24 * 30,
   },
 
   // Experimental features

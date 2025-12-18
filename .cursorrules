@@ -254,6 +254,68 @@ className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pr
 </div>
 ```
 
+## Performance (Core Web Vitals)
+
+### Targets
+- LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1
+
+### Image Optimization
+```tsx
+// LCP images - MUST use priority
+<Image
+  src="/hero.jpg"
+  alt="Hero"
+  fill
+  priority        // ← Required for LCP images!
+  sizes="100vw"
+/>
+
+// Below-fold images - use lazy loading (default)
+<Image src="/photo.jpg" alt="Photo" width={800} height={600} />
+
+// Always specify dimensions to prevent CLS
+<div className="relative aspect-video">
+  <Image src="/thumb.jpg" alt="..." fill className="object-cover" />
+</div>
+```
+
+### Code Splitting
+```tsx
+import dynamic from 'next/dynamic'
+
+// Heavy components - dynamic import
+const HeavyChart = dynamic(() => import('./HeavyChart'), {
+  loading: () => <Skeleton className="h-64" />,
+  ssr: false,
+})
+```
+
+### Responsive Updates
+```tsx
+// Non-urgent updates - use useTransition
+const [isPending, startTransition] = useTransition()
+
+startTransition(() => {
+  setFilteredResults(heavyFilter(items))
+})
+```
+
+### Caching
+```tsx
+// Static pages
+export const dynamic = 'force-static'
+
+// ISR
+export const revalidate = 3600  // 1 hour
+
+// React Query
+useQuery({
+  queryKey: ['data'],
+  queryFn: fetchData,
+  staleTime: 5 * 60 * 1000,  // 5 min fresh
+})
+```
+
 ## Never Do
 
 - ❌ Inline styles (`style={{}}`)
@@ -269,6 +331,9 @@ className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pr
 - ❌ Form inputs without labels
 - ❌ Animations longer than 500ms
 - ❌ Animating layout properties (width, height, margin)
+- ❌ Images without width/height (causes CLS)
+- ❌ LCP images without priority attribute
+- ❌ Heavy libraries in initial bundle (use dynamic import)
 
 ## Common Patterns
 
