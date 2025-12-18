@@ -3,27 +3,48 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Create client only if env vars are available
-let supabaseInstance: SupabaseClient | null = null;
+/**
+ * Supabase 클라이언트 싱글톤 패턴 (Prisma 패턴 적용)
+ *
+ * 개발 환경에서 Hot Reload 시 새 클라이언트가 생성되면 연결 누수가 발생할 수 있습니다.
+ * globalThis를 사용하여 HMR에서도 단일 인스턴스를 유지합니다.
+ *
+ * @see docs/SOLO_DEVELOPER_WORKFLOW_GUIDE.md - 챕터 4.6
+ */
+const globalForSupabase = globalThis as unknown as {
+  supabaseClient: SupabaseClient | undefined;
+  supabaseServerClient: SupabaseClient | undefined;
+};
 
+/**
+ * Supabase 클라이언트 가져오기 (클라이언트/서버 공용)
+ * Hot Reload에서도 단일 인스턴스 유지
+ */
 export function getSupabase(): SupabaseClient {
-  if (!supabaseInstance) {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error(
-        'Supabase URL and Anon Key are required. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
-      );
-    }
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Supabase URL and Anon Key are required. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+    );
   }
-  return supabaseInstance;
+
+  if (!globalForSupabase.supabaseClient) {
+    globalForSupabase.supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  }
+
+  return globalForSupabase.supabaseClient;
 }
 
-// Lazy-loaded supabase for client components
-// Note: In server components, use getSupabase() directly
-export const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : (null as never);
+/**
+ * Supabase 클라이언트 (직접 접근용)
+ * 환경변수가 설정되지 않은 경우 getSupabase() 호출 시 에러 발생
+ */
+export const supabase = supabaseUrl && supabaseAnonKey ? getSupabase() : (null as never);
 
-// Server-side client with service role
+/**
+ * 서버 사이드 클라이언트 (Service Role 키 사용)
+ * 관리자 권한이 필요한 작업에 사용
+ * Hot Reload에서도 단일 인스턴스 유지
+ */
 export function createServerClient(): SupabaseClient {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -31,12 +52,18 @@ export function createServerClient(): SupabaseClient {
       'Supabase URL and Service Role Key are required. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
     );
   }
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+
+  // 서버 클라이언트도 싱글톤 패턴 적용
+  if (!globalForSupabase.supabaseServerClient) {
+    globalForSupabase.supabaseServerClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
+  return globalForSupabase.supabaseServerClient;
 }
 
 // Check if Supabase is configured
