@@ -1,5 +1,7 @@
 # StoryVerse
 
+![CI](https://github.com/josens83/StoryVerse/actions/workflows/ci.yml/badge.svg)
+
 **한국형 웹소설 플랫폼** - 독자와 작가 모두를 위한 프리미엄 웹소설 서비스
 
 ## 프로젝트 비전
