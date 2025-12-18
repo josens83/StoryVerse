@@ -223,6 +223,37 @@ className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pr
 - Large text (18px+): minimum 3:1 ratio
 - Never convey information by color alone
 
+## Animation Guidelines
+
+### Duration
+| Use Case | Duration | Class |
+|----------|----------|-------|
+| Micro (hover, focus) | 150ms | `.transition-micro` |
+| Fast (button click) | 200ms | `.transition-fast` |
+| Normal (modal open) | 300ms | `duration-300` |
+
+### Rules
+- Use GPU-accelerated properties only: `transform`, `opacity`
+- Respect `prefers-reduced-motion` (already handled in globals.css)
+- Available utilities: `.animate-fade-in`, `.animate-slide-up`, `.animate-scale-in`, `.hover-lift`, `.active-scale`
+
+```tsx
+// Button interaction
+<Button className="transition-micro hover:scale-105 active:scale-95">
+  클릭
+</Button>
+
+// Card hover
+<Card className="transition-fast hover:shadow-lg hover:-translate-y-1">
+  <CardContent>콘텐츠</CardContent>
+</Card>
+
+// Modal entrance
+<div className="animate-fade-in animate-scale-in">
+  <Modal />
+</div>
+```
+
 ## Never Do
 
 - ❌ Inline styles (`style={{}}`)
@@ -236,6 +267,8 @@ className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pr
 - ❌ Images without alt text
 - ❌ Icon buttons without aria-label
 - ❌ Form inputs without labels
+- ❌ Animations longer than 500ms
+- ❌ Animating layout properties (width, height, margin)
 
 ## Common Patterns
 
