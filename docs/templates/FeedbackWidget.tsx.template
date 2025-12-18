@@ -1,0 +1,241 @@
+/**
+ * FeedbackWidget Component Template
+ *
+ * 인앱 피드백 수집 위젯 (Chapter 20 - Solo Designer Workflow)
+ *
+ * 사용법:
+ * 1. 이 파일을 src/components/feedback/feedback-widget.tsx로 복사
+ * 2. /api/feedback 엔드포인트 구현 또는 외부 서비스 연동
+ * 3. app/layout.tsx에서 임포트하여 사용
+ *
+ * @example
+ * // app/layout.tsx
+ * import { FeedbackWidget } from '@/components/feedback/feedback-widget'
+ *
+ * export default function RootLayout({ children }) {
+ *   return (
+ *     <html>
+ *       <body>
+ *         {children}
+ *         <FeedbackWidget />
+ *       </body>
+ *     </html>
+ *   )
+ * }
+ */
+
+'use client';
+
+import { useState } from 'react';
+import { MessageSquare, X, Send, CheckCircle } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+
+interface FeedbackWidgetProps {
+  /** API endpoint to submit feedback */
+  endpoint?: string;
+  /** Position of the widget */
+  position?: 'bottom-right' | 'bottom-left';
+  /** Primary color for the trigger button */
+  triggerClassName?: string;
+}
+
+export function FeedbackWidget({
+  endpoint = '/api/feedback',
+  position = 'bottom-right',
+  triggerClassName = 'bg-primary text-primary-foreground',
+}: FeedbackWidgetProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [feedbackType, setFeedbackType] = useState<'bug' | 'idea' | 'other'>('idea');
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+  const positionClasses = {
+    'bottom-right': 'right-4',
+    'bottom-left': 'left-4',
+  };
+
+  const handleSubmit = async () => {
+    if (!feedback.trim()) return;
+
+    setStatus('submitting');
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: feedbackType,
+          message: feedback,
+          page: typeof window !== 'undefined' ? window.location.pathname : '',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit feedback');
+      }
+
+      setStatus('success');
+
+      // Reset after showing success
+      setTimeout(() => {
+        setIsOpen(false);
+        setStatus('idle');
+        setFeedback('');
+        setFeedbackType('idea');
+      }, 2000);
+    } catch {
+      setStatus('error');
+      // Reset error state after 3 seconds
+      setTimeout(() => setStatus('idle'), 3000);
+    }
+  };
+
+  return (
+    <>
+      {/* Trigger Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className={`
+          fixed bottom-4 ${positionClasses[position]}
+          h-12 w-12 rounded-full shadow-lg
+          flex items-center justify-center
+          hover:scale-105 active:scale-95
+          transition-transform duration-150
+          z-40
+          ${triggerClassName}
+        `}
+        aria-label="피드백 보내기"
+      >
+        <MessageSquare className="h-5 w-5" />
+      </button>
+
+      {/* Feedback Panel */}
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/20 z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+
+          {/* Panel */}
+          <div
+            className={`
+              fixed bottom-20 ${positionClasses[position]}
+              w-80 max-w-[calc(100vw-2rem)]
+              bg-background border rounded-lg shadow-xl
+              z-50 animate-slide-up
+            `}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-title"
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 id="feedback-title" className="font-semibold">
+                피드백 보내기
+              </h3>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-muted rounded-md transition-colors"
+                aria-label="닫기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+              {status === 'success' ? (
+                <div className="flex flex-col items-center py-6 text-center">
+                  <CheckCircle className="h-12 w-12 text-green-500 mb-3" />
+                  <p className="font-medium">감사합니다!</p>
+                  <p className="text-sm text-muted-foreground">피드백이 전송되었습니다.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Feedback Type Selection */}
+                  <div className="flex gap-2 mb-4">
+                    {[
+                      { value: 'bug', label: '🐛 버그' },
+                      { value: 'idea', label: '💡 아이디어' },
+                      { value: 'other', label: '💬 기타' },
+                    ].map((type) => (
+                      <button
+                        key={type.value}
+                        onClick={() => setFeedbackType(type.value as typeof feedbackType)}
+                        className={`
+                          flex-1 py-2 px-3 text-sm rounded-md border
+                          transition-colors
+                          ${
+                            feedbackType === type.value
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-muted border-border'
+                          }
+                        `}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Feedback Input */}
+                  <textarea
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="개선 아이디어, 버그, 불편한 점 등을 알려주세요..."
+                    rows={4}
+                    className="
+                      w-full px-3 py-2 rounded-md border
+                      bg-background text-foreground
+                      placeholder:text-muted-foreground
+                      focus:outline-none focus:ring-2 focus:ring-primary
+                      resize-none
+                    "
+                    disabled={status === 'submitting'}
+                  />
+
+                  {/* Error Message */}
+                  {status === 'error' && (
+                    <p className="text-sm text-destructive mt-2">
+                      전송에 실패했습니다. 다시 시도해주세요.
+                    </p>
+                  )}
+
+                  {/* Submit Button */}
+                  <Button
+                    onClick={handleSubmit}
+                    className="w-full mt-3"
+                    disabled={!feedback.trim() || status === 'submitting'}
+                  >
+                    {status === 'submitting' ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        전송 중...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Send className="h-4 w-4" />
+                        보내기
+                      </span>
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 pb-4">
+              <p className="text-xs text-muted-foreground text-center">
+                피드백은 서비스 개선에 활용됩니다.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}

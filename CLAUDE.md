@@ -225,7 +225,31 @@ return <NovelList novels={data} />;
 
 ## 관련 문서
 
+### 핵심 문서
+
 - `docs/VISION.md` - 프로젝트 비전 문서
 - `docs/COMPETITIVE_ANALYSIS.md` - 경쟁 분석
 - `docs/adr/` - 아키텍처 결정 기록
-- `docs/SOLO_DEVELOPER_WORKFLOW_GUIDE.md` - 개발 워크플로우 가이드
+- `docs/SOLO_DEVELOPER_WORKFLOW_GUIDE.md` - 개발 워크플로우 가이드 (전체)
+
+### UI/UX 가이드 (챕터 11-20)
+
+- `docs/AI_UI_REVIEW_CHECKLIST.md` - AI UI 리뷰 체크리스트, Intent Prototyping
+- `docs/RESPONSIVE_PATTERNS.md` - Mobile-First 반응형 패턴
+- `docs/UI_QUALITY_AUTOMATION.md` - Lighthouse CI, 접근성 테스트 자동화
+- `docs/ANIMATION_GUIDELINES.md` - 애니메이션 duration, easing, Framer Motion
+- `docs/ACCESSIBILITY_GUIDE.md` - WCAG 2.1 AA 체크리스트, ARIA 가이드
+- `docs/PERFORMANCE_GUIDE.md` - Core Web Vitals 최적화 가이드
+- `docs/SOLO_DESIGNER_WORKFLOW.md` - 디자이너 없이 작업하는 워크플로우
+
+### 템플릿
+
+- `docs/templates/accessibility.spec.ts.template` - Playwright 접근성 테스트
+- `docs/templates/FeedbackWidget.tsx.template` - 인앱 피드백 위젯
+- `docs/adr/ui-template.md` - UI/UX 결정 ADR 템플릿
+- `docs/adr/ui-decision-log.md` - 간단한 UI 결정 로그
+
+### 빠른 참조
+
+- `docs/QUICK_REFERENCE.md` - 일일 워크플로우, 명령어, 체크리스트
+- `.cursorrules` - AI 컨텍스트 규칙 (디자인 시스템, 성능, 접근성)
