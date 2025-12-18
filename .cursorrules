@@ -167,6 +167,62 @@ const handleSubmit = (e: FormEvent) => {
 - Min length: "{n}자 이상 입력하세요"
 - Password: "비밀번호는 8자 이상이어야 합니다"
 
+## Design Tokens (CSS Variables)
+
+Use CSS variables from globals.css, never hardcode colors:
+
+```tsx
+// ✅ Correct - use design tokens
+className="bg-background text-foreground"
+className="bg-primary text-white"
+className="text-muted-foreground"
+
+// ❌ Wrong - hardcoded colors
+className="bg-white text-black"
+className="bg-[#ff6b35]"
+style={{ color: '#171717' }}
+```
+
+### Available Tokens
+- `--primary`: Brand orange (#ff6b35)
+- `--secondary`: Teal (#4ecdc4)
+- `--background`: Page background
+- `--foreground`: Text color
+- `--coin`: Coin gold (#ffd700)
+- `--vip`: VIP purple (#9c27b0)
+
+## Accessibility (A11y) Rules
+
+### Required for all interactive elements:
+```tsx
+// Images - always meaningful alt text
+<Image src="/novel.jpg" alt="소설 '불멸의 대마법사' 표지" />
+
+// Icon buttons - always aria-label
+<Button variant="ghost" size="icon" aria-label="검색">
+  <Search className="h-5 w-5" />
+</Button>
+
+// Form inputs - always label
+<label htmlFor="email">이메일</label>
+<Input id="email" type="email" />
+
+// Or use sr-only for visual hiding
+<label htmlFor="search" className="sr-only">검색어 입력</label>
+<Input id="search" placeholder="검색..." />
+```
+
+### Focus states - always visible:
+```tsx
+// Use focus-visible for keyboard focus
+className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+```
+
+### Color contrast:
+- Text on background: minimum 4.5:1 ratio
+- Large text (18px+): minimum 3:1 ratio
+- Never convey information by color alone
+
 ## Never Do
 
 - ❌ Inline styles (`style={{}}`)
@@ -177,6 +233,9 @@ const handleSubmit = (e: FormEvent) => {
 - ❌ Skip loading/error/empty states
 - ❌ Direct DOM manipulation
 - ❌ Use `any` type
+- ❌ Images without alt text
+- ❌ Icon buttons without aria-label
+- ❌ Form inputs without labels
 
 ## Common Patterns
 
