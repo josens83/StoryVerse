@@ -1,0 +1,207 @@
+/**
+ * Accessibility Tests with Playwright + axe-core
+ * Based on Solo Developer Workflow Guide Chapter 15
+ *
+ * Setup:
+ * npm install --save-dev @axe-core/playwright @playwright/test
+ * npx playwright install
+ *
+ * Run:
+ * npx playwright test tests/accessibility.spec.ts
+ */
+
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
+
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+
+test.describe('Accessibility Tests', () => {
+  test.describe('Main Pages', () => {
+    test('홈페이지 접근성', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+
+    test('로그인 페이지 접근성', async ({ page }) => {
+      await page.goto(`${BASE_URL}/login`);
+
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+
+    test('회원가입 페이지 접근성', async ({ page }) => {
+      await page.goto(`${BASE_URL}/register`);
+
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+
+    test('장르 페이지 접근성', async ({ page }) => {
+      await page.goto(`${BASE_URL}/genre`);
+
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+
+    test('랭킹 페이지 접근성', async ({ page }) => {
+      await page.goto(`${BASE_URL}/ranking`);
+
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+  });
+
+  test.describe('Component-specific Tests', () => {
+    test('네비게이션 접근성', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      const results = await new AxeBuilder({ page })
+        .include('header')
+        .include('nav')
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+
+    test('푸터 접근성', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      const results = await new AxeBuilder({ page }).include('footer').analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+  });
+
+  test.describe('Interactive Elements', () => {
+    test('모든 버튼에 접근 가능한 이름이 있어야 함', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      const results = await new AxeBuilder({ page })
+        .withRules(['button-name'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+
+    test('모든 링크에 접근 가능한 이름이 있어야 함', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      const results = await new AxeBuilder({ page })
+        .withRules(['link-name'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+
+    test('모든 이미지에 alt 텍스트가 있어야 함', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      const results = await new AxeBuilder({ page })
+        .withRules(['image-alt'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+  });
+
+  test.describe('Form Accessibility', () => {
+    test('폼 요소에 레이블이 연결되어 있어야 함', async ({ page }) => {
+      await page.goto(`${BASE_URL}/login`);
+
+      const results = await new AxeBuilder({ page }).withRules(['label']).analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+  });
+
+  test.describe('Color and Contrast', () => {
+    test('색상 대비가 충분해야 함', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      const results = await new AxeBuilder({ page })
+        .withRules(['color-contrast'])
+        .analyze();
+
+      logViolations(results.violations);
+      expect(results.violations).toEqual([]);
+    });
+  });
+
+  test.describe('Keyboard Navigation', () => {
+    test('Tab 키로 모든 인터랙티브 요소에 접근 가능해야 함', async ({ page }) => {
+      await page.goto(BASE_URL);
+
+      // First interactive element should be focusable
+      await page.keyboard.press('Tab');
+      const firstFocusedElement = await page.evaluate(() => document.activeElement?.tagName);
+      expect(firstFocusedElement).toBeTruthy();
+
+      // Should be able to navigate through multiple elements
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press('Tab');
+      }
+
+      const currentFocused = await page.evaluate(() => document.activeElement?.tagName);
+      expect(currentFocused).toBeTruthy();
+    });
+  });
+});
+
+/**
+ * Helper function to log accessibility violations
+ */
+function logViolations(
+  violations: {
+    id: string;
+    description: string;
+    impact?: string;
+    helpUrl: string;
+    nodes: { html: string; failureSummary?: string }[];
+  }[]
+) {
+  if (violations.length === 0) return;
+
+  console.log('\n🚨 접근성 위반 사항:');
+
+  violations.forEach((violation) => {
+    console.log(`\n❌ ${violation.id}: ${violation.description}`);
+    console.log(`   영향: ${violation.impact}`);
+    console.log(`   도움말: ${violation.helpUrl}`);
+
+    violation.nodes.forEach((node) => {
+      console.log(`   요소: ${node.html.substring(0, 100)}...`);
+      if (node.failureSummary) {
+        console.log(`   수정 방법: ${node.failureSummary}`);
+      }
+    });
+  });
+}
